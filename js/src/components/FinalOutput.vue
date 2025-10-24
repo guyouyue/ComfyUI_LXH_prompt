@@ -34,9 +34,25 @@
               class="lang-btn"
               :class="{ active: viewLanguage === 'zh' }"
               @click="$emit('update:view-language', 'zh')"
-              title="查看语言：中文"
+              title="展示语言：中文"
           >
-            🇨🇨🇳🇳 查看语言
+            cn 中文
+          </button>
+          <button
+              class="lang-btn"
+              :class="{ active: viewLanguage === 'en' }"
+              @click="$emit('update:view-language', 'en')"
+              title="show language：English"
+          >
+            en English
+          </button>
+          <button
+              class="lang-btn"
+              :class="{ active: viewLanguage === 'jp' }"
+              @click="$emit('update:view-language', 'jp')"
+              title="プレゼン言語:日本語です"
+          >
+            jp 日本語です
           </button>
         </div>
       </div>
@@ -101,7 +117,7 @@
               @click="$emit('update:language', 'zh')"
               title="输出语言：中文"
           >
-            cn 输出中文
+            cn 中文
           </button>
           <button
               class="lang-btn"
@@ -109,7 +125,15 @@
               @click="$emit('update:language', 'en')"
               title="输出语言：英文"
           >
-            en 输出英文
+            English
+          </button>
+          <button
+              class="lang-btn"
+              :class="{ active: language === 'jp' }"
+              @click="$emit('update:language', 'jp')"
+              title="プレゼン言語:日本語です"
+          >
+            jp 日本語です
           </button>
         </div>
       </div>
@@ -165,8 +189,14 @@ import {onUnmounted, ref, watch} from 'vue';
 const props = defineProps({
   tokens: Array,
   mode: String,
-  language: String,
-  viewLanguage: String,
+  language: {
+    type: String,
+    default: 'en' // 默认输出语言为英文
+  },
+  viewLanguage: {
+    type: String,
+    default: 'zh' // 默认查看语言为中文
+  },
   focused: Boolean,
   cursorIndex: Number
 });
@@ -179,7 +209,7 @@ const emit = defineEmits([
   'token-dblclick',
   'remove-token',
   'focus',
-  'reorder-tokens' // 新增：词元重新排序事件
+  'reorder-tokens'
 ]);
 
 const focusedSection = ref('mapped');
@@ -434,21 +464,36 @@ const getViewTokenDisplay = (token) => {
   if (!token.mapping) {
     return token.original || token.value;
   }
-  if (props.viewLanguage === 'zh') {
-    return token.mapping.zh || token.zh || token.value;
-  } else {
-    return token.mapping.en || token.en || token.value;
+
+  // 根据查看语言选择显示内容 - 添加空值检查
+  switch (props.viewLanguage) {
+    case 'zh':
+      return token.mapping?.zh || token.zh || token.value;
+    case 'en':
+      return token.mapping?.en || token.en || token.value;
+    case 'jp':
+      return token.mapping?.jp || token.jp || token.value;
+    default:
+      return token.mapping?.zh || token.zh || token.value;
   }
 };
 
+// 获取映射输出区域的词元显示 - 修复空值问题
 const getMappedTokenDisplay = (token) => {
   if (props.mode === 'natural') {
     return token.display || token.value;
   }
-  if (props.language === 'zh') {
-    return token.mapping?.zh || token.zh || token.value;
-  } else {
-    return token.mapping?.en || token.en || token.value;
+
+  // 根据输出语言选择显示内容 - 添加空值检查
+  switch (props.language) {
+    case 'zh':
+      return token.mapping?.zh || token.zh || token.value;
+    case 'en':
+      return token.mapping?.en || token.en || token.value;
+    case 'jp':
+      return token.mapping?.jp || token.jp || token.value;
+    default:
+      return token.mapping?.zh || token.zh || token.value;
   }
 };
 
@@ -464,21 +509,33 @@ const getFinalTextPreview = () => {
   return props.mode === 'token' ? parts.join(', ') : parts.join(' ');
 };
 
+// 修复原始词元标题的空值问题
 const getOriginalTokenTitle = (token) => {
   const parts = [];
   if (token.mapping) {
     parts.push('已映射');
-    if (props.viewLanguage === 'zh') {
-      parts.push(`中文查看: ${token.mapping.zh}`);
-      parts.push(`英文: ${token.mapping.en}`);
-    } else {
-      parts.push(`英文查看: ${token.mapping.en}`);
-      parts.push(`中文: ${token.mapping.zh}`);
+    // 根据查看语言显示对应信息 - 添加空值检查
+    switch (props.viewLanguage) {
+      case 'zh':
+        parts.push(`中文查看: ${token.mapping?.zh || '无'}`);
+        parts.push(`英文: ${token.mapping?.en || '无'}`);
+        if (token.mapping?.jp) parts.push(`日文: ${token.mapping.jp}`);
+        break;
+      case 'en':
+        parts.push(`英文查看: ${token.mapping?.en || '无'}`);
+        parts.push(`中文: ${token.mapping?.zh || '无'}`);
+        if (token.mapping?.jp) parts.push(`日文: ${token.mapping.jp}`);
+        break;
+      case 'jp':
+        parts.push(`日文查看: ${token.mapping?.jp || '无'}`);
+        parts.push(`中文: ${token.mapping?.zh || '无'}`);
+        parts.push(`英文: ${token.mapping?.en || '无'}`);
+        break;
     }
   } else {
     parts.push('未映射');
   }
-  parts.push('双击编辑 | 长按1秒拖拽（橙色高亮）'); // 修改提示
+  parts.push('双击编辑 | 长按1秒拖拽');
   return parts.join(' | ');
 };
 
@@ -486,12 +543,16 @@ const getMappedTokenTitle = (token) => {
   const parts = [];
   if (token.mapping) {
     parts.push('原始值: ' + (token.original || token.value));
+
+    // 根据输出语言显示信息
     if (props.language === 'zh') {
       parts.push(`输出语言: 中文`);
       parts.push(`英文: ${token.mapping.en}`);
+      if (token.mapping.jp) parts.push(`日文: ${token.mapping.jp}`);
     } else {
       parts.push(`输出语言: 英文`);
       parts.push(`中文: ${token.mapping.zh}`);
+      if (token.mapping.jp) parts.push(`日文: ${token.mapping.jp}`);
     }
   } else {
     parts.push('未映射，使用原始值');
@@ -499,9 +560,10 @@ const getMappedTokenTitle = (token) => {
   if (token.isCustomGroup) {
     parts.push('(来自自定义组合)');
   }
-  parts.push('双击编辑 | 长按1秒拖拽（橙色高亮）'); // 修改提示
+  parts.push('双击编辑 | 长按1秒拖拽');
   return parts.join(' | ');
 };
+
 
 const longPressProgress = ref(0); // 长按进度 0-100
 const longPressActive = ref(false); // 是否正在长按
@@ -514,7 +576,6 @@ watch(() => props.focused, (newVal) => {
 });
 
 </script>
-
 
 
 <style scoped>
@@ -538,6 +599,7 @@ watch(() => props.focused, (newVal) => {
 .section-controls {
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .section-controls .lang-btn {
@@ -549,6 +611,7 @@ watch(() => props.focused, (newVal) => {
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .section-controls .lang-btn:hover {
@@ -563,12 +626,12 @@ watch(() => props.focused, (newVal) => {
 }
 
 .original-section .section-controls .lang-btn.active {
-  background: #4CAF50; /* 绿色表示查看语言 */
+  background: #4CAF50;
   border-color: #4CAF50;
 }
 
 .mapped-section .section-controls .lang-btn.active {
-  background: #2196F3; /* 蓝色表示输出语言 */
+  background: #2196F3;
   border-color: #2196F3;
 }
 
@@ -740,7 +803,7 @@ watch(() => props.focused, (newVal) => {
   border-color: #1E88E5 !important; /* 亮蓝色边框 */
   color: #fff !important; /* 白色文字 */
   box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.3),
-              0 2px 8px rgba(30, 136, 229, 0.2);
+  0 2px 8px rgba(30, 136, 229, 0.2);
   transform: translateY(-1px);
 }
 
@@ -769,8 +832,8 @@ watch(() => props.focused, (newVal) => {
   border: 2px dashed #FFB74D !important; /* 更亮的橙色虚线 */
   color: #fff !important;
   box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2),
-              0 0 0 4px rgba(30, 136, 229, 0.2),
-              0 2px 8px rgba(30, 136, 229, 0.2);
+  0 0 0 4px rgba(30, 136, 229, 0.2),
+  0 2px 8px rgba(30, 136, 229, 0.2);
 }
 
 /* 光标选中时的移除按钮样式 */
@@ -802,9 +865,9 @@ watch(() => props.focused, (newVal) => {
   width: var(--long-press-progress, 0%);
   height: 100%;
   background: linear-gradient(90deg,
-    rgba(255, 152, 0, 0.5) 0%,
-    rgba(255, 152, 0, 0.7) 50%,
-    rgba(255, 152, 0, 0.9) 100%);
+  rgba(255, 152, 0, 0.5) 0%,
+  rgba(255, 152, 0, 0.7) 50%,
+  rgba(255, 152, 0, 0.9) 100%);
   z-index: -1;
   transition: width 0.05s linear;
   border-radius: inherit;
@@ -817,7 +880,7 @@ watch(() => props.focused, (newVal) => {
   color: #000 !important;
   transform: scale(1.05);
   box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.4),
-              0 4px 12px rgba(255, 152, 0, 0.5);
+  0 4px 12px rgba(255, 152, 0, 0.5);
   animation: pulse-glow 0.5s ease-in-out;
   z-index: 20;
   padding: 3px 7px; /* 调整padding以保持总尺寸一致 */
@@ -839,15 +902,15 @@ watch(() => props.focused, (newVal) => {
 @keyframes pulse-glow {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7),
-                0 4px 12px rgba(255, 152, 0, 0.4);
+    0 4px 12px rgba(255, 152, 0, 0.4);
   }
   50% {
     box-shadow: 0 0 0 6px rgba(255, 152, 0, 0.4),
-                0 6px 16px rgba(255, 152, 0, 0.6);
+    0 6px 16px rgba(255, 152, 0, 0.6);
   }
   100% {
     box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.4),
-                0 4px 12px rgba(255, 152, 0, 0.5);
+    0 4px 12px rgba(255, 152, 0, 0.5);
   }
 }
 
@@ -871,7 +934,7 @@ watch(() => props.focused, (newVal) => {
   border-color: #FFB74D !important;
   transform: scale(0.95) rotate(2deg);
   box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.5),
-              0 8px 20px rgba(255, 152, 0, 0.4);
+  0 8px 20px rgba(255, 152, 0, 0.4);
 }
 
 /* 长按过程中的文字颜色渐变 */

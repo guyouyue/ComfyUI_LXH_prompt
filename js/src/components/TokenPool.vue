@@ -3,59 +3,77 @@
     <div class="pool-header">
       <h4>📚 词元映射池</h4>
       <input
-        type="text"
-        class="search-input"
-        v-model="searchQuery"
-        placeholder="搜索词元..."
+          type="text"
+          class="search-input"
+          v-model="searchQuery"
+          placeholder="搜索词元..."
       />
     </div>
     <div class="pool-content">
       <div
-        v-for="category in filteredCategories"
-        :key="category.id"
-        class="category"
+          v-for="category in filteredCategories"
+          :key="category.id"
+          class="category"
       >
         <div
-          class="category-header"
-          @click="toggleCategory(category.id)"
+            class="category-header"
+            @click="toggleCategory(category.id)"
         >
           <span class="category-icon">{{ category.expanded ? '▼' : '▶' }}</span>
           <span class="category-title">{{ getCategoryName(category) }}</span>
           <span class="category-count">({{ getCategoryTokenCount(category) }})</span>
+          <span class="category-source" :class="category.source">
+            {{ category.source === 'user' ? '👤' : '⚙️' }}
+          </span>
         </div>
 
         <div v-show="category.expanded" class="category-content">
           <div
-            v-for="subcategory in category.subcategories"
-            :key="subcategory.id"
-            class="subcategory"
+              v-for="subcategory in category.subcategories"
+              :key="subcategory.id"
+              class="subcategory"
           >
             <div
-              class="subcategory-header"
-              @click="toggleSubcategory(category.id, subcategory.id)"
+                class="subcategory-header"
+                @click="toggleSubcategory(category.id, subcategory.id)"
             >
               <span class="subcategory-icon">{{ subcategory.expanded ? '▼' : '▶' }}</span>
               <span class="subcategory-title">{{ getSubcategoryName(subcategory) }}</span>
               <span class="subcategory-count">({{ subcategory.tokens.length }})</span>
+              <span class="subcategory-source" :class="subcategory.source">
+                {{ subcategory.source === 'user' ? '👤' : '⚙️' }}
+              </span>
               <button
-                class="add-token-btn"
-                @click.stop="$emit('add-token', category, subcategory)"
-                title="添加词元"
+                  class="add-token-btn"
+                  @click.stop="$emit('add-token', category, subcategory)"
+                  title="添加词元"
               >
                 +
               </button>
             </div>
 
-            <div v-show="subcategory.expanded" class="token-list">
-              <div
-                v-for="token in subcategory.tokens"
-                :key="token.id"
-                class="token-item"
-                @dblclick="$emit('token-click', token)"
-                :title="`双击添加: ${token.en} / ${token.zh}`"
-              >
-                <span class="token-main">{{ language === 'zh' ? token.zh : token.en }}</span>
-                <span class="token-sub">{{ language === 'zh' ? token.en : token.zh }}</span>
+            <!-- 修改后的词元展示区域 -->
+            <div v-show="subcategory.expanded" class="token-list-container">
+              <div class="token-tags-grid">
+                <span
+                    v-for="token in subcategory.tokens"
+                    :key="token.uniqueId"
+                    class="token-tag"
+                    :class="[token.source, { 'no-mapping': !token.mapping }]"
+                    @dblclick="$emit('token-click', token)"
+                    :title="getTokenTooltip(token)"
+                >
+                  <span class="token-text">
+                    {{ getDisplayText(token) }}
+                  </span>
+                  <span class="token-source-badge" :class="token.source">
+                    {{ token.source === 'user' ? '👤' : '⚙️' }}
+                  </span>
+                </span>
+              </div>
+
+              <div v-if="subcategory.tokens.length === 0" class="empty-tokens">
+                该分类下暂无词元
               </div>
             </div>
           </div>
@@ -70,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import {computed, ref} from 'vue';
 
 const props = defineProps({
   categories: Array,
@@ -91,13 +109,13 @@ const filteredCategories = computed(() => {
   return props.categories.map(cat => {
     const filteredSubs = cat.subcategories.map(sub => {
       const filteredTokens = sub.tokens.filter(token =>
-        token.zh.toLowerCase().includes(query) ||
-        token.en.toLowerCase().includes(query)
+          token.zh?.toLowerCase().includes(query) ||
+          token.en?.toLowerCase().includes(query)
       );
-      return { ...sub, tokens: filteredTokens };
+      return {...sub, tokens: filteredTokens};
     }).filter(sub => sub.tokens.length > 0);
 
-    return { ...cat, subcategories: filteredSubs };
+    return {...cat, subcategories: filteredSubs};
   }).filter(cat => cat.subcategories.length > 0);
 });
 
@@ -113,13 +131,67 @@ const getCategoryTokenCount = (category) => {
   return category.subcategories.reduce((sum, sub) => sum + sub.tokens.length, 0);
 };
 
-const toggleCategory = (categoryId) => {
-  const category = props.categories.find(c => c.id === categoryId);
-  if (category) {
-    category.expanded = !category.expanded;
-  }
+// 获取词元显示文本（根据当前语言）
+const getDisplayText = (token) => {
+  return props.language === 'zh' ? token.zh : token.en;
 };
 
+// 获取词元悬停提示信息
+const getTokenTooltip = (token) => {
+  const parts = [];
+
+  // 来源信息
+  parts.push(token.source === 'user' ? '👤 用户词库' : '⚙️ 系统词库');
+
+  // 语言信息
+  parts.push(`中文: ${token.zh || '无'}`);
+  parts.push(`英文: ${token.en || '无'}`);
+
+  // 其他信息
+  if (token.description) {
+    parts.push(`描述: ${token.description}`);
+  }
+
+  // 映射状态信息
+  if (token.mapping) {
+    parts.push('✅ 已映射');
+  } else {
+    parts.push('⚠️ 未映射');
+  }
+
+  parts.push('双击添加到输出区');
+
+  return parts.join('\n');
+};
+
+// 修改后的一级分类切换函数 - 手风琴模式
+const toggleCategory = (categoryId) => {
+  const targetCategory = props.categories.find(c => c.id === categoryId);
+  if (!targetCategory) return;
+
+  const isCurrentlyExpanded = targetCategory.expanded;
+
+  // 1. 收起所有一级分类及其二级分类
+  props.categories.forEach(category => {
+    category.expanded = false;
+    // 同时收起所有二级分类
+    category.subcategories.forEach(sub => {
+      sub.expanded = false;
+    });
+  });
+
+  // 2. 如果目标分类之前是收起的，则展开它和它的所有二级分类
+  if (!isCurrentlyExpanded) {
+    targetCategory.expanded = true;
+    // 展开所有二级分类
+    targetCategory.subcategories.forEach(sub => {
+      sub.expanded = true;
+    });
+  }
+  // 如果之前是展开的，现在已经被第一步收起了，保持收起状态
+};
+
+// 二级分类切换函数 - 独立控制
 const toggleSubcategory = (categoryId, subcategoryId) => {
   const category = props.categories.find(c => c.id === categoryId);
   if (category) {
@@ -132,6 +204,7 @@ const toggleSubcategory = (categoryId, subcategoryId) => {
 </script>
 
 <style scoped>
+/* 保持原有样式不变 */
 .token-pool {
   display: flex;
   flex-direction: column;
@@ -193,12 +266,18 @@ h4 {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background 0.2s;
+  transition: all 0.2s;
   user-select: none;
 }
 
 .category-header:hover {
   background: #333;
+  transform: translateX(2px);
+}
+
+/* 展开状态的一级分类高亮 */
+.category:has(.category-header) .category-header {
+  position: relative;
 }
 
 .category-icon,
@@ -206,6 +285,7 @@ h4 {
   color: #888;
   font-size: 10px;
   width: 12px;
+  transition: transform 0.2s;
 }
 
 .category-title {
@@ -220,9 +300,37 @@ h4 {
   font-size: 11px;
 }
 
+.category-source {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.category-source.user {
+  background: #0d7dd8;
+  color: white;
+}
+
+.category-source.system {
+  background: #666;
+  color: white;
+}
+
 .category-content {
   padding-left: 16px;
   margin-top: 4px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .subcategory {
@@ -237,12 +345,13 @@ h4 {
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.2s;
+  transition: all 0.2s;
   user-select: none;
 }
 
 .subcategory-header:hover {
   background: #2a2a2a;
+  transform: translateX(2px);
 }
 
 .subcategory-title {
@@ -256,6 +365,22 @@ h4 {
   font-size: 11px;
 }
 
+.subcategory-source {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.subcategory-source.user {
+  background: #0d7dd8;
+  color: white;
+}
+
+.subcategory-source.system {
+  background: #666;
+  color: white;
+}
+
 .add-token-btn {
   width: 18px;
   height: 18px;
@@ -266,44 +391,114 @@ h4 {
   border: none;
   border-radius: 3px;
   color: #fff;
+  cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
+}
+
+.add-token-btn:hover {
+  background: #0a6bc2;
+  transform: scale(1.1);
 }
 
 .subcategory-header:hover .add-token-btn {
   opacity: 1;
 }
 
-.token-list {
-  padding: 4px 0 4px 20px;
+/* 词元展示样式 */
+.token-list-container {
+  padding: 8px 0 8px 20px;
+  animation: fadeIn 0.2s ease-out;
 }
 
-.token-item {
-  padding: 6px 10px;
-  background: #1e1e1e;
-  border-radius: 4px;
-  margin-bottom: 3px;
-  cursor: pointer;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.token-tags-grid {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.token-tag {
+  display: inline-flex;
   align-items: center;
-  transition: all 0.2s;
-}
-
-.token-item:hover {
-  background: #2a2a2a;
-  transform: translateX(4px);
-  border-left: 2px solid #0d7dd8;
-}
-
-.token-main {
+  gap: 4px;
+  padding: 4px 8px;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
   color: #e0e0e0;
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  max-width: 200px;
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.token-sub {
-  color: #888;
-  font-size: 11px;
+.token-tag:hover {
+  background: #404040;
+  transform: translateY(-2px);
+  border-color: #666;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.token-tag.user {
+  border-left: 3px solid #0d7dd8;
+}
+
+.token-tag.system {
+  border-left: 3px solid #666;
+}
+
+.token-tag.no-mapping {
+  border: 1px solid #666;
+  background: #2a2a2a;
+  opacity: 0.8;
+}
+
+.token-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.token-source-badge {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.token-source-badge.user {
+  background: #0d7dd8;
+  color: white;
+}
+
+.token-source-badge.system {
+  background: #666;
+  color: white;
+}
+
+.empty-tokens {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-size: 12px;
+  font-style: italic;
 }
 
 .empty-state {
@@ -324,5 +519,22 @@ h4 {
 .pool-content::-webkit-scrollbar-thumb {
   background: #404040;
   border-radius: 4px;
+}
+
+.pool-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .token-tags-grid {
+    gap: 4px;
+  }
+
+  .token-tag {
+    font-size: 11px;
+    padding: 3px 6px;
+    max-width: 150px;
+  }
 }
 </style>
