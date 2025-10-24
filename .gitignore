@@ -1,0 +1,11 @@
+__pycache__/
+**/__pycache__
+
+.idea/
+
+# virtualenv
+.venv/
+
+data_user/
+
+js/node_modules/

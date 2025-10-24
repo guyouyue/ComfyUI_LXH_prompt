@@ -1,0 +1,114 @@
+{
+  "version": "1.0.0",
+  "categories": [
+    {
+      "id": "character",
+      "name": {
+        "zh": "角色",
+        "en": "Character"
+      },
+      "subcategories": [
+        {
+          "id": "gender",
+          "name": {
+            "zh": "性别",
+            "en": "Gender"
+          },
+          "tokens": [
+            { "id": "char_001", "zh": "男孩", "en": "boy" },
+            { "id": "char_002", "zh": "女孩", "en": "girl" },
+            { "id": "char_003", "zh": "男人", "en": "man" },
+            { "id": "char_004", "zh": "女人", "en": "woman" },
+            { "id": "char_0045", "zh": "女人2", "en": "woman2" },
+            { "id": "char_0043", "zh": "女3人", "en": "woman3" }
+          ]
+        },
+        {
+          "id": "age",
+          "name": {
+            "zh": "年龄",
+            "en": "Age"
+          },
+          "tokens": [
+            { "id": "char_101", "zh": "儿童", "en": "child" },
+            { "id": "char_102", "zh": "青少年", "en": "teenager" },
+            { "id": "char_103", "zh": "成年人", "en": "adult" },
+            { "id": "char_104", "zh": "老年人", "en": "elderly" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "style",
+      "name": {
+        "zh": "风格",
+        "en": "Style"
+      },
+      "subcategories": [
+        {
+          "id": "art_style",
+          "name": {
+            "zh": "艺术风格",
+            "en": "Art Style"
+          },
+          "tokens": [
+            { "id": "style_001", "zh": "动漫", "en": "anime" },
+            { "id": "style_002", "zh": "写实", "en": "realistic" },
+            { "id": "style_003", "zh": "油画", "en": "oil painting" },
+            { "id": "style_004", "zh": "水彩", "en": "watercolor" },
+            { "id": "style_005", "zh": "素描", "en": "sketch" }
+          ]
+        },
+        {
+          "id": "render",
+          "name": {
+            "zh": "渲染",
+            "en": "Render"
+          },
+          "tokens": [
+            { "id": "style_101", "zh": "高质量", "en": "high quality" },
+            { "id": "style_102", "zh": "杰作", "en": "masterpiece" },
+            { "id": "style_103", "zh": "最佳质量", "en": "best quality" },
+            { "id": "style_104", "zh": "超精细", "en": "ultra detailed" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene",
+      "name": {
+        "zh": "场景",
+        "en": "Scene"
+      },
+      "subcategories": [
+        {
+          "id": "location",
+          "name": {
+            "zh": "地点",
+            "en": "Location"
+          },
+          "tokens": [
+            { "id": "scene_001", "zh": "室内", "en": "indoors" },
+            { "id": "scene_002", "zh": "室外", "en": "outdoors" },
+            { "id": "scene_003", "zh": "森林", "en": "forest" },
+            { "id": "scene_004", "zh": "海滩", "en": "beach" },
+            { "id": "scene_005", "zh": "城市", "en": "city" }
+          ]
+        },
+        {
+          "id": "weather",
+          "name": {
+            "zh": "天气",
+            "en": "Weather"
+          },
+          "tokens": [
+            { "id": "scene_101", "zh": "晴天", "en": "sunny" },
+            { "id": "scene_102", "zh": "雨天", "en": "rainy" },
+            { "id": "scene_103", "zh": "多云", "en": "cloudy" },
+            { "id": "scene_104", "zh": "雪天", "en": "snowy" }
+          ]
+        }
+      ]
+    }
+  ]
+}

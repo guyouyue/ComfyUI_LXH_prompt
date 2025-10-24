@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LXH Prompt 开发测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .dev-toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+
+    .dev-toolbar h1 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dev-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .dev-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .dev-input {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 13px;
+      width: 300px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .dev-input:focus {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.5);
+    }
+
+    .dev-input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+
+    .dev-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 8px 16px;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dev-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-1px);
+    }
+
+    .dev-btn.primary {
+      background: rgba(255,255,255,0.9);
+      color: #667eea;
+      border: none;
+    }
+
+    .dev-btn.primary:hover {
+      background: #fff;
+    }
+
+    .dev-main {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #1e1e1e;
+    }
+
+    .dev-sidebar {
+      position: fixed;
+      top: 60px;
+      right: 0;
+      width: 350px;
+      bottom: 0;
+      background: #252525;
+      border-left: 1px solid #404040;
+      padding: 20px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .dev-sidebar.active {
+      display: block;
+    }
+
+    .sidebar-section {
+      margin-bottom: 24px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0d7dd8;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-content {
+      background: #1e1e1e;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .test-case {
+      background: #2a2a2a;
+      border: 1px solid #404040;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .test-case:hover {
+      border-color: #0d7dd8;
+      background: #2d2d2d;
+    }
+
+    .test-case-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+
+    .test-case-desc {
+      color: #888;
+      font-size: 11px;
+    }
+
+    .output-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 350px;
+      height: 150px;
+      background: #1a1a1a;
+      border-top: 1px solid #404040;
+      padding: 12px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      color: #4CAF50;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .output-panel.active {
+      display: block;
+    }
+
+    .output-label {
+      color: #0d7dd8;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .output-text {
+      color: #4CAF50;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .keyboard-shortcuts {
+      background: #2a2a2a;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .shortcut-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .shortcut-key {
+      background: #1e1e1e;
+      padding: 2px 8px;
+      border-radius: 3px;
+      color: #0d7dd8;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <!-- 开发工具栏 -->
+  <div class="dev-toolbar">
+    <h1>
+      🚀 LXH Prompt 开发环境
+      <span class="dev-badge">DEV MODE</span>
+    </h1>
+    <div class="dev-controls">
+      <input
+        type="text"
+        id="testInput"
+        class="dev-input"
+        placeholder="输入测试提示词，如：masterpiece, 1girl, blue eyes"
+        value="masterpiece, best quality, 1girl, blue eyes, long hair"
+      />
+      <button class="dev-btn primary" onclick="openEditor()">
+        ✨ 打开编辑器
+      </button>
+      <button class="dev-btn" onclick="toggleSidebar()">
+        📋 测试用例
+      </button>
+      <button class="dev-btn" onclick="clearOutput()">
+        🗑️ 清空
+      </button>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="dev-main" id="mainArea">
+    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; flex-direction: column; gap: 20px;">
+      <div style="font-size: 48px;">🎨</div>
+      <div style="font-size: 20px;">点击上方按钮打开编辑器</div>
+      <div style="font-size: 14px; color: #444;">
+        快捷键：<kbd style="background: #333; padding: 4px 8px; border-radius: 4px; margin: 0 4px;">Ctrl + E</kbd> 打开编辑器
+      </div>
+    </div>
+  </div>
+
+  <!-- 侧边栏 -->
+  <div class="dev-sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">📝 测试用例</div>
+      <div class="test-case" onclick="loadTestCase('basic')">
+        <div class="test-case-title">基础测试</div>
+        <div class="test-case-desc">简单的提示词</div>
+      </div>
+      <div class="test-case" onclick="loadTestCase('complex')">
+        <div class="test-case-title">复杂提示词</div>
+        <div class="test-case-desc">包含多个词元</div>
+      </div>
+      <div class="test-case" onclick="loadTestCase('chinese')">
+        <div class="test-case-title">中文提示词</div>
+        <div class="test-case-desc">测试中文映射</div>
+      </div>
+      <div class="test-case" onclick="loadTestCase('empty')">
+        <div class="test-case-title">空提示词</div>
+        <div class="test-case-desc">测试初始状态</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">⌨️ 快捷键</div>
+      <div class="keyboard-shortcuts">
+        <div class="shortcut-item">
+          <span>打开编辑器</span>
+          <span class="shortcut-key">Ctrl + E</span>
+        </div>
+        <div class="shortcut-item">
+          <span>清空输出</span>
+          <span class="shortcut-key">Ctrl + L</span>
+        </div>
+        <div class="shortcut-item">
+          <span>切换侧边栏</span>
+          <span class="shortcut-key">Ctrl + B</span>
+        </div>
+        <div class="shortcut-item">
+          <span>刷新页面</span>
+          <span class="shortcut-key">Ctrl + R</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">ℹ️ 开发信息</div>
+      <div class="sidebar-content">
+        <div style="margin-bottom: 8px;">
+          <strong>端口:</strong> 3000
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>热更新:</strong> <span style="color: #4CAF50;">✓ 已启用</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong>Source Map:</strong> <span style="color: #4CAF50;">✓ 已启用</span>
+        </div>
+        <div>
+          <strong>构建模式:</strong> 开发模式
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 输出面板 -->
+  <div class="output-panel" id="outputPanel">
+    <div class="output-label">📤 最终输出：</div>
+    <div class="output-text" id="outputText">等待编辑器返回...</div>
+  </div>
+
+  <!-- Vue 应用挂载点 -->
+  <div id="app"></div>
+
+  <script type="module">
+    import { createApp } from 'vue';
+    import App from './src/App.vue';
+
+    console.log('%c🚀 LXH Prompt 开发环境已启动', 'color: #667eea; font-size: 16px; font-weight: bold;');
+    console.log('%c使用 Ctrl+E 快速打开编辑器', 'color: #888; font-size: 12px;');
+
+    let currentApp = null;
+
+    // 打开编辑器
+    window.openEditor = function() {
+      const input = document.getElementById('testInput');
+      const initialText = input.value.trim();
+
+      console.log('📝 打开编辑器，初始文本:', initialText);
+
+      // 清理旧实例
+      if (currentApp) {
+        try {
+          currentApp.unmount();
+          console.log('🗑️ 已清理旧实例');
+        } catch (e) {
+          console.warn('清理旧实例时出错:', e);
+        }
+      }
+
+      // 获取或创建容器
+      let container = document.getElementById('modal-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'modal-container';
+        document.body.appendChild(container);
+      }
+
+      // 创建 Vue 应用
+      currentApp = createApp(App, {
+        initialText: initialText,
+        onClose: (result) => {
+          console.log('✅ 编辑器关闭');
+
+          if (result !== null) {
+            console.log('📤 返回结果:', result);
+
+            // 显示输出面板
+            const outputPanel = document.getElementById('outputPanel');
+            const outputText = document.getElementById('outputText');
+            outputPanel.classList.add('active');
+            outputText.textContent = result;
+
+            // 更新输入框
+            input.value = result;
+
+            // 添加成功提示
+            showToast('✅ 已更新提示词');
+          } else {
+            console.log('❌ 用户取消');
+            showToast('❌ 已取消编辑');
+          }
+
+          // 清理容器
+          setTimeout(() => {
+            if (currentApp) {
+              currentApp.unmount();
+              currentApp = null;
+            }
+            if (container && container.parentNode) {
+              container.remove();
+            }
+          }, 100);
+        }
+      });
+
+      currentApp.mount(container);
+      console.log('✅ 编辑器已挂载');
+    };
+
+    // 切换侧边栏
+    window.toggleSidebar = function() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+    };
+
+    // 清空输出
+    window.clearOutput = function() {
+      const outputPanel = document.getElementById('outputPanel');
+      const outputText = document.getElementById('outputText');
+      const input = document.getElementById('testInput');
+
+      outputPanel.classList.remove('active');
+      outputText.textContent = '等待编辑器返回...';
+      input.value = '';
+
+      showToast('🗑️ 已清空');
+    };
+
+    // 加载测试用例
+    window.loadTestCase = function(type) {
+      const input = document.getElementById('testInput');
+      const testCases = {
+        basic: 'masterpiece, best quality',
+        complex: 'masterpiece, best quality, 1girl, blue eyes, long hair, school uniform, outdoors, cherry blossoms',
+        chinese: '杰作, 最佳质量, 一个女孩, 蓝色眼睛',
+        empty: ''
+      };
+
+      input.value = testCases[type] || '';
+      showToast(`📝 已加载测试用例: ${type}`);
+
+      // 自动打开编辑器
+      setTimeout(() => openEditor(), 300);
+    };
+
+    // 简单的 Toast 提示
+    window.showToast = function(message) {
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+      `;
+
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    };
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+      // Ctrl + E: 打开编辑器
+      if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        openEditor();
+      }
+
+      // Ctrl + L: 清空
+      if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        clearOutput();
+      }
+
+      // Ctrl + B: 切换侧边栏
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    });
+
+    // 添加 CSS 动画
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    console.log('✅ 开发环境初始化完成');
+  </script>
+</body>
+</html>
