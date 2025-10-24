@@ -62,31 +62,43 @@
             @dragover.prevent="handleDragOver"
             @drop="handleDrop('original')"
         >
-          <span
-              v-for="(token, index) in tokens"
-              :key="token.id"
-              class="token-tag original-token"
-              :class="{
-              'cursor-active': cursorIndex === index && focusedSection === 'original',
-              'no-mapping': !token.mapping,
-              'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'original',
-              'drop-target': dropTargetIndex === index && dropTargetArea === 'original',
-              'long-press-active': longPressActive && longPressToken.area === 'original' && longPressToken.index === index,
-              'long-press-complete': longPressProgress === 100 && longPressToken.area === 'original' && longPressToken.index === index
-            }"
-              :style="{
-              '--long-press-progress': `${longPressProgress}%`
-            }"
-              :title="getOriginalTokenTitle(token)"
-              @mousedown="handleMouseDown($event, token, index, 'original')"
-              @touchstart="handleTouchStart($event, token, index, 'original')"
-              @click="handleOriginalTokenClick(token, index)"
-              @dblclick="$emit('token-dblclick', token, index)"
-              draggable="false"
-          >
-            {{ getViewTokenDisplay(token) }}
-            <button class="token-remove" @click.stop="$emit('remove-token', index)">×</button>
-          </span>
+          <template v-for="(token, index) in tokens" :key="token.id">
+            <!-- 编辑中的词元 - 显示输入框 -->
+            <input
+                v-if="token.isEditing"
+                :ref="el => setEditInputRef(el, index)"
+                type="text"
+                class="token-edit-input"
+                v-model="token.value"
+                :placeholder="'输入词元 (回车确认, ESC取消)'"
+                @keydown.enter.prevent="handleEditConfirm(index)"
+                @keydown.esc.prevent="handleEditCancel(index)"
+                @blur="handleEditBlur(index)"
+            />
+            <!-- 普通词元 - 修改：移除 focusedSection 限制 -->
+            <span
+                v-else
+                class="token-tag original-token"
+                :class="{
+                  'cursor-active': cursorIndex === index,
+                  'no-mapping': !token.mapping,
+                  'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'original',
+                  'drop-target': dropTargetIndex === index && dropTargetArea === 'original',
+                  'long-press-active': longPressActive && longPressToken.area === 'original' && longPressToken.index === index,
+                  'long-press-complete': longPressProgress === 100 && longPressToken.area === 'original' && longPressToken.index === index
+                }"
+                :style="{ '--long-press-progress': `${longPressProgress}%` }"
+                :title="getOriginalTokenTitle(token)"
+                @mousedown="handleMouseDown($event, token, index, 'original')"
+                @touchstart="handleTouchStart($event, token, index, 'original')"
+                @click="handleOriginalTokenClick(token, index)"
+                @dblclick="$emit('token-dblclick', token, index)"
+                draggable="false"
+            >
+              {{ getViewTokenDisplay(token) }}
+              <button class="token-remove" @click.stop="$emit('remove-token', index)">×</button>
+            </span>
+          </template>
           <span
               class="cursor-placeholder"
               v-if="focused && focusedSection === 'original'"
@@ -143,31 +155,43 @@
             @dragover.prevent="handleDragOver"
             @drop="handleDrop('mapped')"
         >
-          <span
-              v-for="(token, index) in tokens"
-              :key="token.id"
-              class="token-tag mapped-token"
-              :class="{
-              'cursor-active': cursorIndex === index && focusedSection === 'mapped',
-              'no-mapping': !token.mapping,
-              'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'mapped',
-              'drop-target': dropTargetIndex === index && dropTargetArea === 'mapped',
-              'long-press-active': longPressActive && longPressToken.area === 'mapped' && longPressToken.index === index,
-              'long-press-complete': longPressProgress === 100 && longPressToken.area === 'mapped' && longPressToken.index === index
-            }"
-              :style="{
-              '--long-press-progress': `${longPressProgress}%`
-            }"
-              :title="getMappedTokenTitle(token)"
-              @mousedown="handleMouseDown($event, token, index, 'mapped')"
-              @touchstart="handleTouchStart($event, token, index, 'mapped')"
-              @click="handleMappedTokenClick(token, index)"
-              @dblclick="$emit('token-dblclick', token, index)"
-              draggable="false"
-          >
-            {{ getMappedTokenDisplay(token) }}
-            <button class="token-remove" @click.stop="$emit('remove-token', index)">×</button>
-          </span>
+          <template v-for="(token, index) in tokens" :key="token.id">
+            <!-- 编辑中的词元 -->
+            <input
+                v-if="token.isEditing"
+                :ref="el => setEditInputRef(el, index)"
+                type="text"
+                class="token-edit-input"
+                v-model="token.value"
+                :placeholder="'输入词元 (回车确认, ESC取消)'"
+                @keydown.enter.prevent="handleEditConfirm(index)"
+                @keydown.esc.prevent="handleEditCancel(index)"
+                @blur="handleEditBlur(index)"
+            />
+            <!-- 普通词元 - 修改：移除 focusedSection 限制 -->
+            <span
+                v-else
+                class="token-tag mapped-token"
+                :class="{
+                  'cursor-active': cursorIndex === index,
+                  'no-mapping': !token.mapping,
+                  'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'mapped',
+                  'drop-target': dropTargetIndex === index && dropTargetArea === 'mapped',
+                  'long-press-active': longPressActive && longPressToken.area === 'mapped' && longPressToken.index === index,
+                  'long-press-complete': longPressProgress === 100 && longPressToken.area === 'mapped' && longPressToken.index === index
+                }"
+                :style="{ '--long-press-progress': `${longPressProgress}%` }"
+                :title="getMappedTokenTitle(token)"
+                @mousedown="handleMouseDown($event, token, index, 'mapped')"
+                @touchstart="handleTouchStart($event, token, index, 'mapped')"
+                @click="handleMappedTokenClick(token, index)"
+                @dblclick="$emit('token-dblclick', token, index)"
+                draggable="false"
+            >
+              {{ getMappedTokenDisplay(token) }}
+              <button class="token-remove" @click.stop="$emit('remove-token', index)">×</button>
+            </span>
+          </template>
           <span
               class="cursor-placeholder"
               v-if="focused && focusedSection === 'mapped'"
@@ -184,18 +208,18 @@
 </template>
 
 <script setup>
-import {onUnmounted, ref, watch} from 'vue';
+import {nextTick, onUnmounted, ref, watch} from 'vue';
 
 const props = defineProps({
   tokens: Array,
   mode: String,
   language: {
     type: String,
-    default: 'en' // 默认输出语言为英文
+    default: 'en'
   },
   viewLanguage: {
     type: String,
-    default: 'zh' // 默认查看语言为中文
+    default: 'zh'
   },
   focused: Boolean,
   cursorIndex: Number
@@ -209,12 +233,86 @@ const emit = defineEmits([
   'token-dblclick',
   'remove-token',
   'focus',
-  'reorder-tokens'
+  'reorder-tokens',
+  'edit-confirm',
+  'edit-cancel'
 ]);
 
 const focusedSection = ref('mapped');
 
-// 拖拽相关状态
+// 编辑输入框的引用
+const editInputRefs = ref(new Map());
+
+// 记录上一次编辑的词元索引，避免重复聚焦
+const lastEditingIndex = ref(-1);
+
+const setEditInputRef = (el, index) => {
+  if (el) {
+    editInputRefs.value.set(index, el);
+  } else {
+    editInputRefs.value.delete(index);
+  }
+};
+
+// 监听 tokens 变化，自动聚焦到编辑输入框
+// 修复：只在新的编辑词元出现时才聚焦和选中，避免每次输入都触发
+watch(() => props.tokens, (newTokens, oldTokens) => {
+  const editingIndex = newTokens.findIndex(t => t.isEditing);
+
+  // 只在以下情况下聚焦：
+  // 1. 有新的编辑词元出现
+  // 2. 编辑词元的索引发生变化
+  if (editingIndex !== -1 && editingIndex !== lastEditingIndex.value) {
+    lastEditingIndex.value = editingIndex;
+
+    nextTick(() => {
+      const input = editInputRefs.value.get(editingIndex);
+      if (input) {
+        input.focus();
+        // 只在首次聚焦时选中所有文本
+        // 如果 value 为空，说明是新创建的编辑词元
+        if (newTokens[editingIndex].value === '') {
+          input.select();
+        }
+      }
+    });
+  } else if (editingIndex === -1) {
+    // 没有编辑词元了，重置记录
+    lastEditingIndex.value = -1;
+  }
+}, {deep: true, immediate: true});
+
+// 编辑确认
+const handleEditConfirm = (index) => {
+  emit('edit-confirm', index);
+};
+
+// 编辑取消
+const handleEditCancel = (index) => {
+  emit('edit-cancel', index);
+};
+
+// 输入框失焦 - 延迟处理以便回车事件先触发
+let blurTimer = null;
+const handleEditBlur = (index) => {
+  blurTimer = setTimeout(() => {
+    if (props.tokens[index]?.isEditing) {
+      handleEditConfirm(index);
+    }
+  }, 150);
+};
+
+// 清理定时器
+onUnmounted(() => {
+  if (blurTimer) {
+    clearTimeout(blurTimer);
+  }
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+  }
+});
+
+// ===== 以下是原有的拖拽相关代码 =====
 const isDragging = ref(false);
 const dragInfo = ref({
   sourceIndex: -1,
@@ -225,14 +323,11 @@ const dragInfo = ref({
 const dropTargetIndex = ref(-1);
 const dropTargetArea = ref(null);
 let longPressTimer = null;
-const LONG_PRESS_DURATION = 1000; // 长按1秒
+const LONG_PRESS_DURATION = 1000;
 
-// 清理定时器
-onUnmounted(() => {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-  }
-});
+const longPressProgress = ref(0);
+const longPressActive = ref(false);
+const longPressToken = ref({area: null, index: -1});
 
 // 鼠标按下事件
 const handleMouseDown = (event, token, index, area) => {
@@ -499,13 +594,13 @@ const getMappedTokenDisplay = (token) => {
 
 const getViewTextPreview = () => {
   if (props.tokens.length === 0) return '空';
-  const parts = props.tokens.map(token => getViewTokenDisplay(token));
+  const parts = props.tokens.filter(t => !t.isEditing).map(token => getViewTokenDisplay(token));
   return props.mode === 'token' ? parts.join(', ') : parts.join(' ');
 };
 
 const getFinalTextPreview = () => {
   if (props.tokens.length === 0) return '空';
-  const parts = props.tokens.map(token => getMappedTokenDisplay(token));
+  const parts = props.tokens.filter(t => !t.isEditing).map(token => getMappedTokenDisplay(token));
   return props.mode === 'token' ? parts.join(', ') : parts.join(' ');
 };
 
@@ -564,11 +659,6 @@ const getMappedTokenTitle = (token) => {
   return parts.join(' | ');
 };
 
-
-const longPressProgress = ref(0); // 长按进度 0-100
-const longPressActive = ref(false); // 是否正在长按
-const longPressToken = ref({area: null, index: -1}); // 当前长按的词元信息
-
 watch(() => props.focused, (newVal) => {
   if (newVal) {
     focusedSection.value = 'mapped';
@@ -579,7 +669,53 @@ watch(() => props.focused, (newVal) => {
 
 
 <style scoped>
-/* 在原有样式基础上添加以下样式 */
+/* 在原有样式基础上添加编辑输入框样式 */
+
+/* 编辑输入框样式 */
+.token-edit-input {
+  padding: 4px 12px;
+  background: #2a2a2a;
+  border: 2px solid #0d7dd8;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+  outline: none;
+  min-width: 120px;
+  max-width: 250px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  animation: inputGlow 0.4s ease-out;
+}
+
+.token-edit-input:focus {
+  border-color: #42A5F5;
+  background: #333;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.25),
+  0 2px 8px rgba(66, 165, 245, 0.3);
+}
+
+.token-edit-input::placeholder {
+  color: #666;
+  font-size: 11px;
+}
+
+/* 输入框出现动画 */
+@keyframes inputGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 125, 216, 0.8);
+    transform: scale(0.95);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(13, 125, 216, 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(13, 125, 216, 0.25);
+    transform: scale(1);
+  }
+}
+
+/* ... 保持原有的所有其他样式不变 ... */
 
 .section-header {
   display: flex;
@@ -729,11 +865,11 @@ watch(() => props.focused, (newVal) => {
 }
 
 .original-section .section-title {
-  color: #4CAF50; /* 绿色表示原始输入 */
+  color: #4CAF50;
 }
 
 .mapped-section .section-title {
-  color: #2196F3; /* 蓝色表示映射输出 */
+  color: #2196F3;
 }
 
 .output-content {
@@ -779,8 +915,6 @@ watch(() => props.focused, (newVal) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-
-  /* 声明 CSS 变量的默认值 */
   --long-press-progress: 0%;
 }
 
@@ -797,46 +931,40 @@ watch(() => props.focused, (newVal) => {
   border-color: #2196F3;
 }
 
-/* 光标选中状态 - 蓝色背景高亮 */
 .token-tag.cursor-active {
-  background: #1565C0 !important; /* 深蓝色背景 */
-  border-color: #1E88E5 !important; /* 亮蓝色边框 */
-  color: #fff !important; /* 白色文字 */
+  background: #1565C0 !important;
+  border-color: #1E88E5 !important;
+  color: #fff !important;
   box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.3),
   0 2px 8px rgba(30, 136, 229, 0.2);
   transform: translateY(-1px);
 }
 
-/* 原始输入区域光标选中 - 使用绿色调的蓝色 */
 .original-token.cursor-active {
   background: #0277BD !important;
   border-color: #29B6F6 !important;
 }
 
-/* 映射输出区域光标选中 - 使用标准蓝色 */
 .mapped-token.cursor-active {
   background: #1565C0 !important;
   border-color: #42A5F5 !important;
 }
 
-/* 未映射词元 - 虚线橙色边框 */
 .token-tag.no-mapping {
-  border: 2px dashed #FF9800; /* 加粗虚线边框 */
+  border: 2px dashed #FF9800;
   border-style: dashed;
-  padding: 3px 7px; /* 调整padding以保持总尺寸一致 */
+  padding: 3px 7px;
 }
 
-/* 未映射且被光标选中 - 蓝色背景 + 橙色虚线边框 */
 .token-tag.no-mapping.cursor-active {
   background: #1565C0 !important;
-  border: 2px dashed #FFB74D !important; /* 更亮的橙色虚线 */
+  border: 2px dashed #FFB74D !important;
   color: #fff !important;
   box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2),
   0 0 0 4px rgba(30, 136, 229, 0.2),
   0 2px 8px rgba(30, 136, 229, 0.2);
 }
 
-/* 光标选中时的移除按钮样式 */
 .token-tag.cursor-active .token-remove {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #fff !important;
@@ -849,14 +977,12 @@ watch(() => props.focused, (newVal) => {
   transform: scale(1.2);
 }
 
-/* 长按激活状态 */
 .token-tag.long-press-active {
   position: relative;
   overflow: hidden;
   z-index: 10;
 }
 
-/* 长按进度填充效果 - 覆盖在蓝色背景之上 */
 .token-tag.long-press-active::before {
   content: '';
   position: absolute;
@@ -873,7 +999,6 @@ watch(() => props.focused, (newVal) => {
   border-radius: inherit;
 }
 
-/* 长按完成时的橙色高亮效果 - 完全覆盖 */
 .token-tag.long-press-complete {
   background: #ff9800 !important;
   border: 2px solid #FFB74D !important;
@@ -883,22 +1008,19 @@ watch(() => props.focused, (newVal) => {
   0 4px 12px rgba(255, 152, 0, 0.5);
   animation: pulse-glow 0.5s ease-in-out;
   z-index: 20;
-  padding: 3px 7px; /* 调整padding以保持总尺寸一致 */
+  padding: 3px 7px;
 }
 
-/* 原始词元的长按完成样式 */
 .original-token.long-press-complete {
   background: #ff9800 !important;
   border-color: #FFB74D !important;
 }
 
-/* 映射词元的长按完成样式 */
 .mapped-token.long-press-complete {
   background: #ff9800 !important;
   border-color: #FFB74D !important;
 }
 
-/* 脉冲发光动画 */
 @keyframes pulse-glow {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7),
@@ -914,7 +1036,6 @@ watch(() => props.focused, (newVal) => {
   }
 }
 
-/* 长按进度指示器 */
 .token-tag.long-press-active::after {
   content: '';
   position: absolute;
@@ -928,7 +1049,6 @@ watch(() => props.focused, (newVal) => {
   box-shadow: 0 0 4px rgba(255, 152, 0, 0.5);
 }
 
-/* 拖拽中的词元保持橙色高亮 */
 .token-tag.dragging.long-press-complete {
   background: #ff9800 !important;
   border-color: #FFB74D !important;
@@ -937,19 +1057,16 @@ watch(() => props.focused, (newVal) => {
   0 8px 20px rgba(255, 152, 0, 0.4);
 }
 
-/* 长按过程中的文字颜色渐变 */
 .token-tag.long-press-active {
-  color: #fff !important; /* 保持白色，更容易看清 */
+  color: #fff !important;
   font-weight: 600;
 }
 
-/* 长按完成时的文字颜色 */
 .token-tag.long-press-complete {
   color: #000 !important;
   font-weight: 700;
 }
 
-/* 移除按钮在长按时的样式 */
 .token-tag.long-press-active .token-remove {
   background: rgba(0, 0, 0, 0.2) !important;
   color: #fff !important;
@@ -968,7 +1085,6 @@ watch(() => props.focused, (newVal) => {
   transform: scale(1.2);
 }
 
-/* 拖拽目标位置指示器 */
 .token-tag.drop-target {
   position: relative;
 }
@@ -1008,7 +1124,6 @@ watch(() => props.focused, (newVal) => {
   }
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .token-tag.cursor-active {
     transform: scale(1.02);
@@ -1108,54 +1223,16 @@ watch(() => props.focused, (newVal) => {
 }
 
 .token-tag {
-  /* 添加过渡效果 */
   transition: all 0.2s ease;
   position: relative;
 }
 
-/* 拖拽中的词元样式 */
 .token-tag.dragging {
   opacity: 0.5;
   transform: scale(0.95);
   z-index: 1000;
 }
 
-/* 拖拽目标位置指示器 */
-.token-tag.drop-target {
-  position: relative;
-}
-
-.token-tag.drop-target::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -2px;
-  right: -2px;
-  height: 3px;
-  background: #0d7dd8;
-  border-radius: 2px;
-  transform: translateY(-50%);
-  animation: pulse 1s infinite;
-}
-
-.original-token.drop-target::before {
-  background: #4CAF50;
-}
-
-.mapped-token.drop-target::before {
-  background: #2196F3;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* 拖拽过程中的列表样式 */
 .token-list.dragging {
   cursor: grabbing;
 }
@@ -1164,128 +1241,5 @@ watch(() => props.focused, (newVal) => {
 .token-tag {
   user-select: none;
   -webkit-user-select: none;
-}
-
-/* 其他现有样式保持不变 */
-.final-output {
-  background: #252525;
-  border-radius: 8px;
-  border: 1px solid #404040;
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
-  max-height: 400px;
-  transition: border-color 0.3s;
-}
-
-/* 在现有的样式后添加长按拖拽动画效果 */
-
-/* 长按激活状态 */
-.token-tag.long-press-active {
-  position: relative;
-  overflow: hidden;
-  z-index: 10;
-}
-
-/* 长按进度填充效果 */
-.token-tag.long-press-active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: var(--long-press-progress, 0%);
-  height: 100%;
-  background: linear-gradient(90deg,
-  rgba(255, 152, 0, 0.3) 0%,
-  rgba(255, 152, 0, 0.6) 50%,
-  rgba(255, 152, 0, 0.9) 100%);
-  z-index: -1;
-  transition: width 0.1s linear;
-  border-radius: inherit;
-}
-
-/* 长按完成时的橙色高亮效果 */
-.token-tag.long-press-complete {
-  background: #ff9800 !important;
-  border-color: #ff9800 !important;
-  color: #000 !important;
-  transform: scale(1.05);
-  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3),
-  0 4px 12px rgba(255, 152, 0, 0.4);
-  animation: pulse-glow 0.5s ease-in-out;
-  z-index: 20;
-}
-
-/* 原始词元的长按完成样式 */
-.original-token.long-press-complete {
-  background: #ff9800 !important;
-  border-color: #ff9800 !important;
-}
-
-/* 映射词元的长按完成样式 */
-.mapped-token.long-press-complete {
-  background: #ff9800 !important;
-  border-color: #ff9800 !important;
-}
-
-/* 脉冲发光动画 */
-@keyframes pulse-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.6),
-    0 4px 12px rgba(255, 152, 0, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(255, 152, 0, 0.3),
-    0 6px 16px rgba(255, 152, 0, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3),
-    0 4px 12px rgba(255, 152, 0, 0.4);
-  }
-}
-
-/* 长按进度指示器 */
-.token-tag.long-press-active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: var(--long-press-progress, 0%);
-  height: 2px;
-  background: #ff9800;
-  border-radius: 1px;
-  transition: width 0.1s linear;
-}
-
-/* 拖拽中的词元保持橙色高亮 */
-.token-tag.dragging.long-press-complete {
-  background: #ff9800 !important;
-  border-color: #ff9800 !important;
-  transform: scale(0.95) rotate(2deg);
-  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.5),
-  0 8px 20px rgba(255, 152, 0, 0.3);
-}
-
-/* 长按过程中的文字颜色变化 */
-.token-tag.long-press-active {
-  color: #333 !important;
-  font-weight: 600;
-}
-
-/* 移除按钮在长按时的样式 */
-.token-tag.long-press-active .token-remove {
-  background: rgba(0, 0, 0, 0.3) !important;
-  color: #fff !important;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .token-tag.long-press-complete {
-    transform: scale(1.03);
-  }
-
-  .token-tag.dragging.long-press-complete {
-    transform: scale(0.92) rotate(2deg);
-  }
 }
 </style>

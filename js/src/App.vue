@@ -1,104 +1,3 @@
-<template>
-  <Transition name="modal">
-    <div v-if="true" class="lxh-modal-overlay" @click.self="handleCancel" @mousedown.stop>
-      <div class="lxh-modal-content" @mousedown.stop>
-        <!-- 头部 -->
-        <div class="lxh-modal-header">
-          <div class="header-left">
-            <h3>✨ LXH Prompt 编辑器</h3>
-          </div>
-          <button class="close-btn" @click="handleCancel">&times;</button>
-        </div>
-
-        <!-- 主体内容区 -->
-        <div class="lxh-modal-body">
-          <!-- 最终输出区 -->
-          <FinalOutput
-              :tokens="finalTokens"
-              :mode="outputMode"
-              :language="outputLanguage"
-              :view-language="viewLanguage"
-              :focused="focusedArea === 'output'"
-              :cursor-index="cursorPosition.index"
-              @update:mode="outputMode = $event"
-              @update:language="handleOutputLanguageChange"
-              @update:view-language="handleViewLanguageChange"
-              @token-click="handleTokenClick"
-              @token-dblclick="handleTokenEdit"
-              @remove-token="handleRemoveToken"
-              @focus="focusedArea = 'output'"
-              @reorder-tokens="handleReorderTokens"
-          />
-
-          <!-- 下方分栏区域 -->
-          <div class="bottom-panels">
-            <!-- 左侧：自定义词元组合池 -->
-            <div class="left-panel">
-              <CustomTokenPool
-                  :groups="customGroups"
-                  :focused="focusedArea === 'custom'"
-                  :language="viewLanguage"
-                  @add-token="showGroupDialog(null)"
-                  @edit-group="showGroupDialog"
-                  @delete-group="handleDeleteGroup"
-                  @use-token="handleUseToken"
-                  @use-group="handleUseGroup"
-                  @update-weight="handleUpdateWeight"
-                  @remove-token="handleRemoveTokenFromGroup"
-                  @add-token-to-group="handleAddTokenToGroup"
-                  @click="focusedArea = 'custom'"
-              />
-            </div>
-
-            <!-- 右侧：词元映射池 -->
-            <div class="right-panel">
-              <TokenPool
-                  :categories="tokenCategories"
-                  :language="viewLanguage"
-                  :focused="focusedArea === 'pool'"
-                  @token-click="handlePoolTokenClick"
-                  @add-token="handleAddNewToken"
-                  @click="focusedArea = 'pool'"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- 底部操作栏 -->
-        <div class="lxh-modal-footer">
-          <div class="footer-tips">
-            💡💡 {{ getFocusTips() }} | 词元数: {{ finalTokens.length }} | 字符数: {{ finalText.length }}
-            | 查看语言: {{ viewLanguage === 'zh' ? '中文' : '英文' }}
-            | 输出语言: {{ outputLanguage === 'zh' ? '中文' : '英文' }}
-          </div>
-          <div class="footer-actions">
-            <button @click="handleCancel">取消 (Esc)</button>
-            <button class="primary" @click="handleConfirm">确认 (Ctrl+Enter)</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 组合编辑对话框 -->
-      <GroupDialog
-          v-if="showingGroupDialog"
-          :group="editingGroup"
-          :is-edit="!!editingGroup"
-          @close="showingGroupDialog = false"
-          @confirm="handleGroupConfirm"
-      />
-
-      <!-- 词元选择器 -->
-      <TokenSelector
-          v-if="showingTokenSelector"
-          :all-tokens="allTokensFlat"
-          :language="viewLanguage"
-          @close="showingTokenSelector = false"
-          @select="handleTokenSelected"
-      />
-    </div>
-  </Transition>
-</template>
-
 <script setup>
 import {computed, onMounted, onUnmounted, ref} from 'vue';
 import FinalOutput from './components/FinalOutput.vue';
@@ -161,6 +60,11 @@ const finalText = computed(() => {
 
 const allTokensFlat = computed(() => {
   return getAllTokensFlat(tokenCategories.value);
+});
+
+// 检查是否有词元正在编辑
+const hasEditingToken = computed(() => {
+  return finalTokens.value.some(token => token.isEditing);
 });
 
 // ===== 生命周期 =====
@@ -234,16 +138,126 @@ const parseInitialText = (text) => {
 
 // 键盘事件处理
 const handleKeyDown = (e) => {
-  if (e.key === 'Escape') {
-    if (showingGroupDialog.value || showingTokenSelector.value) {
+  // 防止在对话框打开时触发
+  if (showingGroupDialog.value || showingTokenSelector.value) {
+    if (e.key === 'Escape') {
       showingGroupDialog.value = false;
       showingTokenSelector.value = false;
-    } else {
-      handleCancel();
     }
+    return;
+  }
+
+  // 如果有词元正在编辑中，不处理全局快捷键（除了 Esc 和 Ctrl+Enter）
+  if (hasEditingToken.value) {
+    // 只允许 Esc 和 Ctrl+Enter
+    if (e.key === 'Escape') {
+      handleCancel();
+    } else if (e.ctrlKey && e.key === 'Enter') {
+      // 如果正在编辑，先完成编辑再确认
+      const editingIndex = finalTokens.value.findIndex(t => t.isEditing);
+      if (editingIndex !== -1) {
+        handleEditConfirm(editingIndex);
+      }
+      // 稍微延迟一下再确认，让编辑完成
+      setTimeout(() => {
+        handleConfirm();
+      }, 100);
+    }
+    // 其他按键（包括空格）不处理，让输入框自己处理
+    return;
+  }
+
+  // 没有词元在编辑时，处理正常的快捷键
+  if (e.key === 'Escape') {
+    handleCancel();
   } else if (e.ctrlKey && e.key === 'Enter') {
     handleConfirm();
+  } else if (e.key === ' ' && focusedArea.value === FOCUS_AREAS.OUTPUT) {
+    // 空格键：在光标后插入新的编辑词元
+    // 检查是否有词元被选中
+    if (cursorPosition.value.index !== null) {
+      e.preventDefault();
+      handleInsertNewToken();
+    }
   }
+};
+
+// 插入新的可编辑词元
+const handleInsertNewToken = () => {
+  const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
+      ? cursorPosition.value.index + 1
+      : finalTokens.value.length;
+
+  const newToken = {
+    id: `editing_${Date.now()}_${Math.random()}`,
+    value: '',
+    original: '',
+    display: '',
+    mapping: null,
+    isEditing: true
+  };
+
+  finalTokens.value.splice(pos, 0, newToken);
+  setCursor('output', pos);
+
+  console.log('[App] 插入新的编辑词元，位置:', pos);
+};
+
+// 编辑确认
+const handleEditConfirm = (index) => {
+  const token = finalTokens.value[index];
+  if (!token || !token.isEditing) return;
+
+  const value = token.value.trim();
+
+  // 如果为空，删除这个词元
+  if (!value) {
+    console.log('[App] 编辑内容为空，删除词元');
+    finalTokens.value.splice(index, 1);
+    if (index > 0) {
+      setCursor('output', index - 1);
+    }
+    return;
+  }
+
+  // 查找映射
+  const mapping = findTokenMappingByValue(value);
+
+  console.log('[App] 编辑确认，值:', value, '找到映射:', !!mapping);
+
+  // 转换为正式词元
+  finalTokens.value[index] = {
+    id: `token_${Date.now()}_${Math.random()}`,
+    value: value,
+    original: value,
+    display: mapping
+        ? (outputLanguage.value === LANGUAGES.ZH ? mapping.zh : mapping.en)
+        : value,
+    mapping: mapping,
+    isEditing: false
+  };
+
+  // 移动光标到当前位置（保持选中）
+  setCursor('output', index);
+
+  console.log('[App] 编辑完成，重新启用快捷键监听');
+};
+
+// 编辑取消
+const handleEditCancel = (index) => {
+  console.log('[App] 编辑取消，删除词元');
+  // 删除编辑中的词元
+  finalTokens.value.splice(index, 1);
+  // 光标回到前一个位置
+  if (index > 0) {
+    setCursor('output', index - 1);
+  } else if (finalTokens.value.length > 0) {
+    setCursor('output', 0);
+  } else {
+    setCursor('output', null);
+  }
+
+  console.log('[App] 编辑取消，重新启用快捷键监听');
 };
 
 // 输出语言切换
@@ -414,8 +428,12 @@ const handleAddNewToken = (category, subcategory) => {
 
 // 获取焦点提示
 const getFocusTips = () => {
+  if (hasEditingToken.value) {
+    return '正在编辑词元中... (回车确认 | ESC取消)';
+  }
+
   const tips = {
-    output: '双击词元编辑 | 点击词库添加词元',
+    output: '点击词元选中 | 空格插入新词元 | 双击词元编辑',
     custom: '双击词元使用 | 点击🎲随机选择',
     pool: '双击词元添加到输出区'
   };
@@ -424,6 +442,12 @@ const getFocusTips = () => {
 
 // 确认
 const handleConfirm = () => {
+  // 如果还有词元在编辑中，先提示
+  if (hasEditingToken.value) {
+    alert('请先完成词元编辑（回车确认或ESC取消）');
+    return;
+  }
+
   console.log('[LXH Prompt Vue] 确认，返回文本:', finalText.value);
   updatePreferences({outputMode: outputMode.value});
   emit('close', finalText.value);
@@ -431,10 +455,127 @@ const handleConfirm = () => {
 
 // 取消
 const handleCancel = () => {
+  // 如果有词元在编辑中，询问是否放弃
+  if (hasEditingToken.value) {
+    if (!confirm('有词元正在编辑中，确定要放弃编辑并关闭吗？')) {
+      return;
+    }
+  }
+
   console.log('[LXH Prompt Vue] 取消');
   emit('close', null);
 };
 </script>
+
+<template>
+  <Transition name="modal">
+    <div v-if="true" class="lxh-modal-overlay" @click.self="handleCancel" @mousedown.stop>
+      <div class="lxh-modal-content" @mousedown.stop>
+        <!-- 头部 -->
+        <div class="lxh-modal-header">
+          <div class="header-left">
+            <h3>✨ LXH Prompt 编辑器</h3>
+            <!-- 编辑状态指示器 -->
+            <span v-if="hasEditingToken" class="editing-indicator">
+              ✏️ 编辑中...
+            </span>
+          </div>
+          <button class="close-btn" @click="handleCancel">&times;</button>
+        </div>
+
+        <!-- 主体内容区 -->
+        <div class="lxh-modal-body">
+          <!-- 最终输出区 -->
+          <FinalOutput
+              :tokens="finalTokens"
+              :mode="outputMode"
+              :language="outputLanguage"
+              :view-language="viewLanguage"
+              :focused="focusedArea === 'output'"
+              :cursor-index="cursorPosition.index"
+              @update:mode="outputMode = $event"
+              @update:language="handleOutputLanguageChange"
+              @update:view-language="handleViewLanguageChange"
+              @token-click="handleTokenClick"
+              @token-dblclick="handleTokenEdit"
+              @remove-token="handleRemoveToken"
+              @focus="focusedArea = 'output'"
+              @reorder-tokens="handleReorderTokens"
+              @edit-confirm="handleEditConfirm"
+              @edit-cancel="handleEditCancel"
+          />
+
+          <!-- 下方分栏区域 -->
+          <div class="bottom-panels">
+            <!-- 左侧：自定义词元组合池 -->
+            <div class="left-panel">
+              <CustomTokenPool
+                  :groups="customGroups"
+                  :focused="focusedArea === 'custom'"
+                  :language="viewLanguage"
+                  @add-token="showGroupDialog(null)"
+                  @edit-group="showGroupDialog"
+                  @delete-group="handleDeleteGroup"
+                  @use-token="handleUseToken"
+                  @use-group="handleUseGroup"
+                  @update-weight="handleUpdateWeight"
+                  @remove-token="handleRemoveTokenFromGroup"
+                  @add-token-to-group="handleAddTokenToGroup"
+                  @click="focusedArea = 'custom'"
+              />
+            </div>
+
+            <!-- 右侧：词元映射池 -->
+            <div class="right-panel">
+              <TokenPool
+                  :categories="tokenCategories"
+                  :language="viewLanguage"
+                  :focused="focusedArea === 'pool'"
+                  @token-click="handlePoolTokenClick"
+                  @add-token="handleAddNewToken"
+                  @click="focusedArea = 'pool'"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="lxh-modal-footer">
+          <div class="footer-tips">
+            💡 {{ getFocusTips() }} | 词元数: {{ finalTokens.length }} | 字符数: {{ finalText.length }}
+            | 查看语言: {{ viewLanguage === 'zh' ? '中文' : viewLanguage === 'en' ? '英文' : '日文' }}
+            | 输出语言: {{ outputLanguage === 'zh' ? '中文' : outputLanguage === 'en' ? '英文' : '日文' }}
+            <span v-if="!hasEditingToken" class="shortcut-tip">
+              | <strong>选中词元后按空格插入新词元</strong>
+            </span>
+          </div>
+          <div class="footer-actions">
+            <button @click="handleCancel">取消 (Esc)</button>
+            <button class="primary" @click="handleConfirm">确认 (Ctrl+Enter)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 组合编辑对话框 -->
+      <GroupDialog
+          v-if="showingGroupDialog"
+          :group="editingGroup"
+          :is-edit="!!editingGroup"
+          @close="showingGroupDialog = false"
+          @confirm="handleGroupConfirm"
+      />
+
+      <!-- 词元选择器 -->
+      <TokenSelector
+          v-if="showingTokenSelector"
+          :all-tokens="allTokensFlat"
+          :language="viewLanguage"
+          @close="showingTokenSelector = false"
+          @select="handleTokenSelected"
+      />
+    </div>
+  </Transition>
+</template>
 
 <style scoped>
 /* 保持之前的样式不变 */
@@ -491,6 +632,31 @@ h3 {
   color: #fafafa;
   font-size: 18px;
   font-weight: 600;
+}
+
+/* 编辑状态指示器 */
+.editing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #ff9800;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 12px;
+  animation: pulse-editing 1.5s infinite;
+}
+
+@keyframes pulse-editing {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 .close-btn {
@@ -554,6 +720,10 @@ h3 {
 .footer-tips {
   font-size: 12px;
   color: #888;
+}
+
+.shortcut-tip {
+  color: #42A5F5;
 }
 
 .footer-actions {
