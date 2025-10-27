@@ -93,7 +93,6 @@
                 @mousedown="handleMouseDown($event, token, index, 'original')"
                 @touchstart="handleTouchStart($event, token, index, 'original')"
                 @click="handleOriginalTokenClick(token, index)"
-                @dblclick="$emit('token-dblclick', token, index)"
                 draggable="false"
             >
               {{ getViewTokenDisplay(token) }}
@@ -187,7 +186,6 @@
                 @mousedown="handleMouseDown($event, token, index, 'mapped')"
                 @touchstart="handleTouchStart($event, token, index, 'mapped')"
                 @click="handleMappedTokenClick(token, index)"
-                @dblclick="$emit('token-dblclick', token, index)"
                 draggable="false"
             >
               {{ getMappedTokenDisplay(token) }}
@@ -548,13 +546,16 @@ const handleOriginalTokenClick = (token, index) => {
   cancelLongPress();
   focusedSection.value = 'original';
   emit('token-click', token, index);
+  emit('token-dblclick', token, index);
 };
 
 const handleMappedTokenClick = (token, index) => {
   cancelLongPress();
   focusedSection.value = 'mapped';
   emit('token-click', token, index);
+  emit('token-dblclick', token, index);
 };
+
 
 // 获取查看区域的词元显示（使用viewLanguage）
 const getViewTokenDisplay = (token) => {
@@ -677,7 +678,7 @@ const getOriginalTokenTitle = (token) => {
     parts.push('未映射');
   }
 
-  parts.push('双击编辑 | 长按1秒拖拽');
+  parts.push('单击编辑 | 长按1秒拖拽');
   return parts.join('\n');
 };
 
@@ -700,7 +701,7 @@ const getMappedTokenTitle = (token) => {
 
     parts.push(`候选词元: ${token.poolData.tokens?.length || 0} 个`);
     parts.push('最终输出: ' + token.value);
-    parts.push('双击编辑 | 长按1秒拖拽');
+    parts.push('单击编辑 | 长按1秒拖拽');
     return parts.join('\n');
   }
 
@@ -730,7 +731,7 @@ const getMappedTokenTitle = (token) => {
     parts.push('(来自自定义组合)');
   }
 
-  parts.push('双击编辑 | 长按1秒拖拽');
+  parts.push('单击编辑 | 长按1秒拖拽');
   return parts.join('\n');
 };
 
