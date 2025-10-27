@@ -1,5 +1,5 @@
 import {ref} from 'vue';
-import {getDataPath, getUserDataPath, getSaveUserTokensPath} from '../utils/pathHelper.js';
+import {getDataPath, getSaveUserTokensPath, getUserDataPath} from '../utils/pathHelper.js';
 
 export function useTokens() {
     const tokenCategories = ref([]);
@@ -81,15 +81,19 @@ export function useTokens() {
     const processSystemTokens = (categories) => {
         return categories.map(category => ({
             ...category,
-            source: 'system', // 标记来源
+            source: 'system',
             subcategories: category.subcategories.map(sub => ({
                 ...sub,
                 source: 'system',
                 tokens: sub.tokens.map(token => ({
                     ...token,
                     source: 'system',
-                    // 生成系统词元的唯一ID（基于分类+子分类+英文名）
-                    uniqueId: `system_${category.id}_${sub.id}_${token.en?.replace(/\s+/g, '_') || token.zh?.replace(/\s+/g, '_')}`
+                    uniqueId: `system_${category.id}_${sub.id}_${token.en?.replace(/\s+/g, '_') || token.zh?.replace(/\s+/g, '_')}`,
+                    // 新增：确保分类信息完整
+                    categoryId: category.id,
+                    subcategoryId: sub.id,
+                    categoryName: category.name,
+                    subcategoryName: sub.name
                 }))
             }))
         }));
@@ -124,15 +128,19 @@ export function useTokens() {
     const processUserTokens = (categories) => {
         return categories.map(category => ({
             ...category,
-            source: 'user', // 标记来源
+            source: 'user',
             subcategories: category.subcategories.map(sub => ({
                 ...sub,
                 source: 'user',
                 tokens: sub.tokens.map(token => ({
                     ...token,
                     source: 'user',
-                    // 用户词元的唯一ID（基于分类+子分类+英文名）
-                    uniqueId: `user_${category.id}_${sub.id}_${token.en?.replace(/\s+/g, '_') || token.zh?.replace(/\s+/g, '_')}`
+                    uniqueId: `user_${category.id}_${sub.id}_${token.en?.replace(/\s+/g, '_') || token.zh?.replace(/\s+/g, '_')}`,
+                    // 新增：确保分类信息完整
+                    categoryId: category.id,
+                    subcategoryId: sub.id,
+                    categoryName: category.name,
+                    subcategoryName: sub.name
                 }))
             }))
         }));
@@ -278,7 +286,7 @@ export function useTokens() {
             // 加载现有用户数据
             const userDataPath = getUserDataPath('data.json');
             const response = await fetch(userDataPath);
-            let userData = { categories: [] };
+            let userData = {categories: []};
 
             if (response.ok) {
                 userData = await response.json();
@@ -322,7 +330,7 @@ export function useTokens() {
     // 保存用户词库
     const saveUserTokens = async (userData = null) => {
         try {
-            const dataToSave = userData || { categories: userTokens.value };
+            const dataToSave = userData || {categories: userTokens.value};
 
             // 保存到 localStorage
             localStorage.setItem('lxh_user_tokens', JSON.stringify(dataToSave.categories));

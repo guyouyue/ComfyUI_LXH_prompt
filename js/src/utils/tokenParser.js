@@ -20,10 +20,8 @@ export function parseTextToTokens(text, tokenCategories, mode = 'token') {
     // 根据模式分割文本
     let parts;
     if (mode === 'token') {
-        // 词元模式：按逗号分割
         parts = text.split(',').map(t => t.trim()).filter(Boolean);
     } else {
-        // 自然语言模式：按空格分割
         parts = text.split(/\s+/).filter(Boolean);
     }
 
@@ -34,9 +32,14 @@ export function parseTextToTokens(text, tokenCategories, mode = 'token') {
         return {
             id: `token_${Date.now()}_${index}`,
             value: part,
-            original: part, // 保存原始值
+            original: part,
             display: part,
-            mapping: mapping
+            mapping: mapping,
+            // 新增：保留分类信息
+            categoryId: mapping?.categoryId || '',
+            subcategoryId: mapping?.subcategoryId || '',
+            categoryName: mapping?.categoryName || '',
+            subcategoryName: mapping?.subcategoryName || ''
         };
     });
 }

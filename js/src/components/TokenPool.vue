@@ -220,8 +220,38 @@ const getFilteredCustomPoolCount = () => {
 };
 
 const handleTokenClick = (token) => {
-  console.log('[TokenPool] 单击词元，打开编辑器:', token);
-  emit('token-click', token);
+  // 查找 token 所属的分类
+  let categoryId = '';
+  let subcategoryId = '';
+
+  for (const category of props.categories) {
+    for (const subcategory of category.subcategories) {
+      // 通过 token.id 或引用匹配
+      const foundToken = subcategory.tokens.find(t =>
+        t.id === token.id || t === token
+      );
+
+      if (foundToken) {
+        categoryId = category.id;
+        subcategoryId = subcategory.id;
+        break;
+      }
+    }
+    if (categoryId) break;
+  }
+
+  console.log('[TokenPool] 单击词元，打开编辑器:', {
+    token,
+    categoryId,
+    subcategoryId
+  });
+
+  // 发出事件时包含完整的分类信息
+  emit('token-click', {
+    ...token,
+    categoryId,
+    subcategoryId
+  });
 };
 
 const handleTokenDoubleClick = (token) => {

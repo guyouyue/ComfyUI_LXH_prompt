@@ -354,11 +354,36 @@ const handleGroupConfirm = (groupData) => {
 };
 
 // 打开词元编辑器（在左侧面板）
+// 修改：打开词元编辑器时添加分类信息
 const openTokenEditor = (token, type = 'single') => {
-  editingToken.value = token;
+  let tokenWithCategory = token;
+
+  // 如果是最终提示词区域的词元，尝试从映射中获取分类信息
+  if (type === 'single' && token.mapping) {
+    tokenWithCategory = {
+      ...token,
+      categoryId: token.mapping.categoryId,
+      subcategoryId: token.mapping.subcategoryId,
+      categoryName: token.mapping.categoryName,
+      subcategoryName: token.mapping.subcategoryName
+    };
+  }
+
+  // 如果是未映射词元，添加默认分类信息
+  if (type === 'unmapped' && !token.categoryId) {
+    tokenWithCategory = {
+      ...token,
+      categoryId: '',
+      subcategoryId: '',
+      categoryName: '',
+      subcategoryName: ''
+    };
+  }
+
+  editingToken.value = tokenWithCategory;
   editingTokenType.value = type;
   showEditor.value = true;
-  console.log('[App] 打开词元编辑器:', type, token);
+  console.log('[App] 打开词元编辑器:', type, tokenWithCategory);
 };
 
 // 打开新建词元编辑器

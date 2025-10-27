@@ -518,6 +518,9 @@ const formData = ref({
 const tempCategories = ref([]);
 const tempSubcategories = ref([]);
 
+// 新增：初始化标志
+const isInitializing = ref(false);
+
 const poolTokens = ref([]);
 const originalValue = ref('');
 const isSystemToken = ref(false);
@@ -529,13 +532,11 @@ const tokenSource = computed(() => {
 
 const canSave = computed(() => {
   if (props.tokenType === 'single' || props.tokenType === 'unmapped') {
-    // 修改：至少需要ID和任意一种语言
     return formData.value.id && (formData.value.zh || formData.value.en || formData.value.jp);
   }
   return true;
 });
 
-// 新增：合并原始分类和临时分类
 const mergedCategories = computed(() => {
   return [...props.categories, ...tempCategories.value];
 });
@@ -573,15 +574,12 @@ const getSubcategoryName = (subcategory) => {
 };
 
 const getSubcategories = (categoryId) => {
-  // 先在原始分类中查找
   const category = props.categories.find(cat => cat.id === categoryId);
   if (category) {
-    // 合并原始子分类和临时子分类
     const tempSubs = tempSubcategories.value.filter(sub => sub.parentId === categoryId);
     return [...category.subcategories, ...tempSubs];
   }
 
-  // 如果是临时分类，返回其临时子分类
   const tempCategory = tempCategories.value.find(cat => cat.id === categoryId);
   if (tempCategory) {
     const tempSubs = tempSubcategories.value.filter(sub => sub.parentId === categoryId);
@@ -599,7 +597,6 @@ const editCustomToken = (token, index) => {
   emit('edit-token', token, index);
 };
 
-// 修改：确认新建分类
 const confirmNewCategory = (type) => {
   if (!canConfirmNewCategory.value) return;
 
@@ -608,7 +605,6 @@ const confirmNewCategory = (type) => {
       const newCategoryId = `new_category_${Date.now()}`;
       const newCategoryName = formData.value.newCategoryName.trim();
 
-      // 创建临时分类对象
       const tempCategory = {
         id: newCategoryId,
         name: {
@@ -616,17 +612,13 @@ const confirmNewCategory = (type) => {
           en: newCategoryName
         },
         subcategories: [],
-        isTemp: true // 标记为临时分类
+        isTemp: true
       };
 
-      // 添加到临时分类列表
       tempCategories.value.push(tempCategory);
-
-      // 更新表单数据
       formData.value.categoryId = newCategoryId;
       formData.value.newCategoryName = '';
 
-      // 通知父组件（保存时使用）
       emit('new-category', {
         id: newCategoryId,
         name: newCategoryName,
@@ -642,7 +634,6 @@ const confirmNewCategory = (type) => {
       const newSubcategoryId = `new_subcategory_${Date.now()}`;
       const newSubcategoryName = formData.value.newSubcategoryName.trim();
 
-      // 创建临时子分类对象
       const tempSubcategory = {
         id: newSubcategoryId,
         name: {
@@ -651,17 +642,13 @@ const confirmNewCategory = (type) => {
         },
         parentId: formData.value.categoryId,
         tokens: [],
-        isTemp: true // 标记为临时分类
+        isTemp: true
       };
 
-      // 添加到临时子分类列表
       tempSubcategories.value.push(tempSubcategory);
-
-      // 更新表单数据
       formData.value.subcategoryId = newSubcategoryId;
       formData.value.newSubcategoryName = '';
 
-      // 通知父组件（保存时使用）
       emit('new-category', {
         id: newSubcategoryId,
         name: newSubcategoryName,
@@ -675,7 +662,6 @@ const confirmNewCategory = (type) => {
 };
 
 const cancelNewCategory = () => {
-  // 恢复原来的分类选择
   if (formData.value.tempCategoryId) {
     formData.value.categoryId = formData.value.tempCategoryId;
   } else {
@@ -688,21 +674,23 @@ const cancelNewCategory = () => {
     formData.value.subcategoryId = '';
   }
 
-  // 清空临时输入
   formData.value.newCategoryName = '';
   formData.value.newSubcategoryName = '';
   formData.value.tempCategoryId = '';
   formData.value.tempSubcategoryId = '';
 };
 
-// 监听分类选择变化，保存原有选择
+// 修改：监听分类选择变化，但初始化时不清空子分类
 watch(() => formData.value.categoryId, (newVal, oldVal) => {
+  console.log('[TokenEditor] categoryId 变化:', { newVal, oldVal, isInitializing: isInitializing.value });
+
   if (newVal === '__new__' && oldVal && oldVal !== '__new__') {
     formData.value.tempCategoryId = oldVal;
   }
 
-  // 当一级分类改变时，清空二级分类选择
-  if (newVal !== oldVal && newVal !== '__new__') {
+  // 修改：只有在非初始化状态下才清空二级分类
+  if (!isInitializing.value && newVal !== oldVal && newVal !== '__new__') {
+    console.log('[TokenEditor] 清空二级分类选择');
     formData.value.subcategoryId = '';
   }
 });
@@ -713,14 +701,11 @@ watch(() => formData.value.subcategoryId, (newVal, oldVal) => {
   }
 });
 
-// 更新保存逻辑
 const handleSave = () => {
-  // 检查是否有未确认的新建分类
   if (formData.value.categoryId === '__new__' || formData.value.subcategoryId === '__new__') {
     if (!confirm('您有未确认的新建分类，是否继续保存？未确认的分类将不会被创建。')) {
       return;
     }
-    // 取消新建分类
     cancelNewCategory();
   }
 
@@ -729,7 +714,6 @@ const handleSave = () => {
     tokenType: props.tokenType,
     isSystem: isSystemToken.value,
     poolTokens: props.tokenType === 'pool' ? poolTokens.value : undefined,
-    // 添加临时分类信息
     tempCategories: tempCategories.value,
     tempSubcategories: tempSubcategories.value
   };
@@ -742,11 +726,13 @@ const handleSave = () => {
   emit('save', saveData);
 };
 
-// 初始化表单数据
+// 修改：初始化表单数据，添加初始化标志
 const initializeFormData = () => {
   if (!props.token) return;
 
-  // 重置临时分类
+  // 设置初始化标志
+  isInitializing.value = true;
+
   tempCategories.value = [];
   tempSubcategories.value = [];
 
@@ -756,13 +742,26 @@ const initializeFormData = () => {
     const tokenData = props.token.mapping || props.token;
     isSystemToken.value = tokenData.source === 'system';
 
+    // 优先从 props.token 获取分类信息，其次从 tokenData
+    const categoryId = props.token.categoryId || tokenData.categoryId || '';
+    const subcategoryId = props.token.subcategoryId || tokenData.subcategoryId || '';
+
+    console.log('[TokenEditor] 初始化词元，分类信息:', {
+      tokenCategoryId: props.token.categoryId,
+      tokenDataCategoryId: tokenData.categoryId,
+      finalCategoryId: categoryId,
+      tokenSubcategoryId: props.token.subcategoryId,
+      tokenDataSubcategoryId: tokenData.subcategoryId,
+      finalSubcategoryId: subcategoryId
+    });
+
     formData.value = {
       id: tokenData.id || tokenData.uniqueId || '',
       zh: tokenData.zh || '',
       en: tokenData.en || '',
       jp: tokenData.jp || '',
-      categoryId: tokenData.categoryId || '',
-      subcategoryId: tokenData.subcategoryId || '',
+      categoryId: categoryId,
+      subcategoryId: subcategoryId,
       description: tokenData.description || '',
       isSystem: isSystemToken.value,
       newCategoryName: '',
@@ -775,9 +774,9 @@ const initializeFormData = () => {
       id: `user_${Date.now()}`,
       zh: originalValue.value,
       en: '',
-      jp: '', // 添加日语字段
-      categoryId: '',
-      subcategoryId: '',
+      jp: '',
+      categoryId: props.token.categoryId || '',
+      subcategoryId: props.token.subcategoryId || '',
       description: `未映射词元: ${originalValue.value}`,
       newCategoryName: '',
       newSubcategoryName: '',
@@ -793,6 +792,12 @@ const initializeFormData = () => {
     };
     poolTokens.value = poolData.tokens || poolData.parsedTokens || [];
   }
+
+  // 延迟重置初始化标志，确保所有 watch 都执行完毕
+  setTimeout(() => {
+    isInitializing.value = false;
+    console.log('[TokenEditor] 初始化完成');
+  }, 0);
 };
 
 watch(() => props.token, initializeFormData, {immediate: true});
