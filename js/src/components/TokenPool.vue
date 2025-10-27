@@ -10,22 +10,22 @@
       />
     </div>
     <div class="pool-content">
-      <!-- 自定义词元池 - 作为一级分类 -->
-      <div v-if="hasCustomGroups && !isSearching" class="category custom-category">
+      <!-- 自定义词元池 - 修改：搜索状态下也显示（如果有匹配结果） -->
+      <div v-if="hasCustomGroups && (filteredCustomGroups.length > 0 || !isSearching)" class="category custom-category">
         <div
             class="category-header"
             @click="toggleCustomPoolCategory"
         >
           <span class="category-icon">{{ isCustomPoolExpanded ? '▼' : '▶' }}</span>
           <span class="category-title">自定义词元池</span>
-          <span class="category-count">({{ totalCustomPoolCount }})</span>
+          <span class="category-count">({{ getFilteredCustomPoolCount() }})</span>
           <span class="category-source custom">🎲</span>
         </div>
 
         <div v-show="isCustomPoolExpanded" class="category-content">
-          <!-- 二级分组 (groups) -->
+          <!-- 二级分组 (groups) - 使用过滤后的结果 -->
           <div
-              v-for="group in customGroups"
+              v-for="group in filteredCustomGroups"
               :key="group.id"
               class="subcategory custom-group"
           >
@@ -122,7 +122,7 @@
       </div>
 
       <!-- 空状态 -->
-      <div v-if="!hasCustomGroups && filteredCategories.length === 0" class="empty-state">
+      <div v-if="filteredCategories.length === 0 && filteredCustomGroups.length === 0" class="empty-state">
         {{ isSearching ? '未找到匹配的词元，请尝试其他关键词' : '暂无词元' }}
       </div>
     </div>
@@ -154,34 +154,87 @@ const hasCustomGroups = computed(() => {
   return props.customGroups && props.customGroups.length > 0;
 });
 
-// 计算自定义词元池的总数
-const totalCustomPoolCount = computed(() => {
-  if (!props.customGroups) return 0;
-  return props.customGroups.reduce((total, group) => {
-    return total + (group.pool?.length || 0);
-  }, 0);
-});
-
 // 是否正在搜索
 const isSearching = computed(() => {
   return searchQuery.value.trim().length > 0;
 });
 
-// 在文档2的 script 部分添加
+// 新增：过滤自定义词元池
+const filteredCustomGroups = computed(() => {
+  if (!props.customGroups || !isSearching.value) {
+    return props.customGroups || [];
+  }
+
+  const query = searchQuery.value.toLowerCase();
+
+  // 过滤 groups，并过滤每个 group 中的 pool 项
+  return props.customGroups.map(group => {
+    // 过滤 pool 项
+    const filteredPool = (group.pool || []).filter(poolItem => {
+      // 匹配池项目的 id
+      if (poolItem.id?.toLowerCase().includes(query)) return true;
+
+      // 匹配池项目的中文名称
+      if (poolItem.name?.zh?.toLowerCase().includes(query)) return true;
+
+      // 匹配池项目的英文名称
+      if (poolItem.name?.en?.toLowerCase().includes(query)) return true;
+
+      // 匹配池项目的描述
+      if (poolItem.description?.toLowerCase().includes(query)) return true;
+
+      return false;
+    });
+
+    // 返回包含过滤后 pool 的 group
+    return {
+      ...group,
+      pool: filteredPool
+    };
+  }).filter(group => group.pool.length > 0); // 只保留有匹配项的 group
+});
+
+// 新增：计算过滤后的词元池总数
+const getFilteredCustomPoolCount = () => {
+  if (!isSearching.value) {
+    // 非搜索状态，返回总数
+    if (!props.customGroups) return 0;
+    return props.customGroups.reduce((total, group) => {
+      return total + (group.pool?.length || 0);
+    }, 0);
+  } else {
+    // 搜索状态，返回过滤后的数量
+    return filteredCustomGroups.value.reduce((total, group) => {
+      return total + (group.pool?.length || 0);
+    }, 0);
+  }
+};
+
+// 双击词元池项目
 const handlePoolItemDoubleClick = (poolItem) => {
   console.log('[TokenPool] 双击词元池项目:', poolItem);
   emit('use-pool-item', poolItem);
 };
 
-// 监听搜索状态变化
+// 监听搜索状态变化 - 修改：搜索时也展开自定义词元池
 watch(isSearching, (newValue) => {
   if (newValue) {
-    // 开始搜索时，收起自定义词元池
-    isCustomPoolExpanded.value = false;
-    expandedCustomGroups.value.clear();
-    console.log('[TokenPool] 开始搜索，收起自定义词元池');
+    console.log('[TokenPool] 开始搜索');
 
-    // 自动展开所有搜索结果
+    // 如果有匹配的自定义词元池，展开它
+    if (filteredCustomGroups.value.length > 0) {
+      isCustomPoolExpanded.value = true;
+      // 自动展开所有有匹配结果的分组
+      filteredCustomGroups.value.forEach(group => {
+        expandedCustomGroups.value.add(group.id);
+      });
+    } else {
+      // 没有匹配结果，收起
+      isCustomPoolExpanded.value = false;
+      expandedCustomGroups.value.clear();
+    }
+
+    // 自动展开所有系统词库搜索结果
     if (filteredCategories.value.length > 0) {
       filteredCategories.value.forEach(cat => {
         expandedCategories.value.add(cat.id);
@@ -192,27 +245,32 @@ watch(isSearching, (newValue) => {
     }
   } else {
     // 清除搜索时，收起所有分类
+    isCustomPoolExpanded.value = false;
+    expandedCustomGroups.value.clear();
     expandedCategories.value.clear();
     expandedSubcategories.value.clear();
     console.log('[TokenPool] 清除搜索，收起所有分类');
   }
 });
 
-// 切换自定义词元池一级分类 - 修改：实现手风琴效果
+// 切换自定义词元池一级分类
 const toggleCustomPoolCategory = () => {
   const willExpand = !isCustomPoolExpanded.value;
 
-  // 收起所有系统词库分类
-  expandedCategories.value.clear();
-  expandedSubcategories.value.clear();
+  // 如果不是搜索状态，收起所有系统词库分类
+  if (!isSearching.value) {
+    expandedCategories.value.clear();
+    expandedSubcategories.value.clear();
+  }
 
   // 切换自定义词元池状态
   isCustomPoolExpanded.value = willExpand;
 
   if (willExpand) {
     // 展开时，自动展开所有二级分组
-    if (props.customGroups) {
-      props.customGroups.forEach(group => {
+    const groupsToExpand = isSearching.value ? filteredCustomGroups.value : props.customGroups;
+    if (groupsToExpand) {
+      groupsToExpand.forEach(group => {
         expandedCustomGroups.value.add(group.id);
       });
     }
@@ -233,13 +291,12 @@ const toggleCustomGroup = (groupId) => {
   }
 };
 
-// 一级分类切换 - 修改：实现手风琴模式并收起自定义词元池
+// 一级分类切换
 const toggleCategory = (categoryId) => {
   // 如果在搜索状态，不使用手风琴模式
   if (isSearching.value) {
     if (expandedCategories.value.has(categoryId)) {
       expandedCategories.value.delete(categoryId);
-      // 同时收起该分类下的所有子分类
       const category = props.categories.find(c => c.id === categoryId);
       if (category) {
         category.subcategories.forEach(sub => {
@@ -248,7 +305,6 @@ const toggleCategory = (categoryId) => {
       }
     } else {
       expandedCategories.value.add(categoryId);
-      // 同时展开该分类下的所有子分类
       const category = props.categories.find(c => c.id === categoryId);
       if (category) {
         category.subcategories.forEach(sub => {
@@ -274,7 +330,6 @@ const toggleCategory = (categoryId) => {
   if (!isCurrentlyExpanded) {
     expandedCategories.value.add(categoryId);
 
-    // 展开该分类下的所有子分类
     const category = props.categories.find(c => c.id === categoryId);
     if (category) {
       category.subcategories.forEach(sub => {
@@ -296,6 +351,7 @@ const toggleSubcategory = (categoryId, subcategoryId) => {
   }
 };
 
+// 过滤系统词库分类
 const filteredCategories = computed(() => {
   if (!searchQuery.value.trim()) {
     return props.categories;

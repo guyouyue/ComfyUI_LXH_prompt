@@ -17,7 +17,7 @@
             @click="$emit('update:mode', 'natural')"
             title="自然语言模式"
         >
-          💬 自然语言
+          💬 自然语言(待开发)
         </button>
       </div>
     </div>
