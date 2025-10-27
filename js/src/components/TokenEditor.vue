@@ -184,6 +184,143 @@
                   class="form-input"
               />
             </div>
+            <div class="form-group">
+              <label>日文映射 (jp)</label>
+              <input
+                  type="text"
+                  v-model="formData.jp"
+                  placeholder="日文映射"
+                  class="form-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>📁 保存到分类</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>一级分类 *</label>
+              <div class="category-input-container">
+                <select v-model="formData.categoryId" class="form-select" required>
+                  <option value="">请选择分类</option>
+                  <option
+                      v-for="category in mergedCategories"
+                      :key="category.id"
+                      :value="category.id"
+                  >
+                    {{ getCategoryName(category) }}
+                    {{ category.isTemp ? ' (新建)' : '' }}
+                  </option>
+                  <option value="__new__">➕ 新建分类</option>
+                </select>
+                <input
+                    v-if="formData.categoryId === '__new__'"
+                    type="text"
+                    v-model="formData.newCategoryName"
+                    placeholder="输入新分类名称"
+                    class="form-input new-category-input"
+                    @keydown.enter="confirmNewCategory('category')"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>二级分类 *</label>
+              <div class="category-input-container">
+                <select
+                    v-model="formData.subcategoryId"
+                    :disabled="!formData.categoryId || formData.categoryId === '__new__'"
+                    class="form-select"
+                    required
+                >
+                  <option value="">请选择子分类</option>
+                  <option
+                      v-for="subcategory in getSubcategories(formData.categoryId)"
+                      :key="subcategory.id"
+                      :value="subcategory.id"
+                  >
+                    {{ getSubcategoryName(subcategory) }}
+                    {{ subcategory.isTemp ? ' (新建)' : '' }}
+                  </option>
+                  <option value="__new__">➕ 新建子分类</option>
+                </select>
+                <input
+                    v-if="formData.subcategoryId === '__new__'"
+                    type="text"
+                    v-model="formData.newSubcategoryName"
+                    placeholder="输入新子分类名称"
+                    class="form-input new-category-input"
+                    @keydown.enter="confirmNewCategory('subcategory')"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 新增：确认/取消按钮（独立显示） -->
+          <div v-if="showNewCategoryButtons" class="new-category-actions">
+            <button
+                class="btn-confirm-new"
+                @click="confirmNewCategory(formData.categoryId === '__new__' ? 'category' : 'subcategory')"
+                :disabled="!canConfirmNewCategory"
+            >
+              ✅ 确认新建{{ formData.categoryId === '__new__' ? '一级分类' : '二级分类' }}
+            </button>
+            <button
+                class="btn-cancel-new"
+                @click="cancelNewCategory"
+            >
+              ❌ 取消新建
+            </button>
+          </div>
+        </div>
+
+        <div class="form-section" v-if="formData.description !== undefined">
+          <h4>📝 描述信息</h4>
+          <textarea
+              v-model="formData.description"
+              placeholder="词元描述..."
+              class="form-textarea"
+              rows="3"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 未映射词元编辑 -->
+      <div v-else-if="tokenType === 'unmapped'" class="unmapped-form">
+        <div class="warning-banner">
+          ⚠️ 当前词元未映射到词库，您可以将其保存到用户词库
+        </div>
+
+        <div class="form-section">
+          <h4>🔍 词元内容</h4>
+          <div class="token-preview">
+            <span class="preview-label">原始值:</span>
+            <span class="preview-value">{{ originalValue }}</span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>🌐 多语言映射</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>中文映射 (zh)</label>
+              <input
+                  type="text"
+                  v-model="formData.zh"
+                  :placeholder="`建议值: ${originalValue}`"
+                  class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label>英文映射 (en)</label>
+              <input
+                  type="text"
+                  v-model="formData.en"
+                  placeholder="英文映射"
+                  class="form-input"
+              />
+            </div>
           </div>
         </div>
 
@@ -392,7 +529,8 @@ const tokenSource = computed(() => {
 
 const canSave = computed(() => {
   if (props.tokenType === 'single' || props.tokenType === 'unmapped') {
-    return formData.value.id && formData.value.zh && formData.value.en;
+    // 修改：至少需要ID和任意一种语言
+    return formData.value.id && (formData.value.zh || formData.value.en || formData.value.jp);
   }
   return true;
 });
@@ -465,7 +603,6 @@ const editCustomToken = (token, index) => {
 const confirmNewCategory = (type) => {
   if (!canConfirmNewCategory.value) return;
 
-  // 保存新建的分类信息到表单数据
   if (type === 'category' || type === 'both') {
     if (formData.value.categoryId === '__new__' && formData.value.newCategoryName.trim()) {
       const newCategoryId = `new_category_${Date.now()}`;
@@ -638,7 +775,7 @@ const initializeFormData = () => {
       id: `user_${Date.now()}`,
       zh: originalValue.value,
       en: '',
-      jp: '',
+      jp: '', // 添加日语字段
       categoryId: '',
       subcategoryId: '',
       description: `未映射词元: ${originalValue.value}`,
@@ -666,6 +803,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .token-editor-embedded {
   display: flex;
   flex-direction: column;
