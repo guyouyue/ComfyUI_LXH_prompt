@@ -107,6 +107,19 @@
             { "id": "scene_103", "zh": "多云", "en": "cloudy" },
             { "id": "scene_104", "zh": "雪天", "en": "snowy" }
           ]
+        },
+        {
+          "id": "hair",
+          "name": {
+            "zh": "头发",
+            "en": "hair"
+          },
+          "tokens": [
+            { "id": "hair_101", "zh": "黑发", "en": "black hair" },
+            { "id": "hair_102", "zh": "红发", "en": "red hair" },
+            { "id": "hair_103", "zh": "黄发", "en": "yellow hair" },
+            { "id": "hair_104", "zh": "白发", "en": "white hair" }
+          ]
         }
       ]
     }

@@ -2,7 +2,6 @@
 import {computed, onMounted, onUnmounted, ref} from 'vue';
 import FinalOutput from './components/FinalOutput.vue';
 import TokenPool from './components/TokenPool.vue';
-import CustomTokenPool from './components/CustomTokenPool.vue';
 import GroupDialog from './components/GroupDialog.vue';
 import TokenSelector from './components/TokenSelector.vue';
 
@@ -24,8 +23,8 @@ const emit = defineEmits(['close']);
 
 // ===== 状态管理 =====
 const outputMode = ref(OUTPUT_MODES.TOKEN);
-const outputLanguage = ref(LANGUAGES.ZH);  // 输出语言
-const viewLanguage = ref(LANGUAGES.ZH);   // 查看语言（新增）
+const outputLanguage = ref(LANGUAGES.ZH);
+const viewLanguage = ref(LANGUAGES.ZH);
 const focusedArea = ref(FOCUS_AREAS.OUTPUT);
 
 // 组合式函数
@@ -73,6 +72,7 @@ onMounted(async () => {
 
   // 加载偏好设置
   loadPreferences();
+
   if (preferences.value.outputMode) {
     outputMode.value = preferences.value.outputMode;
   }
@@ -83,9 +83,20 @@ onMounted(async () => {
     viewLanguage.value = preferences.value.viewLanguage;
   }
 
-  // 加载数据
+  // 先加载词库数据
+  console.log('[App] 开始加载词库数据...');
   await loadTokenData();
+  console.log('[App] 词库数据加载完成，词元数量:', allTokensFlat.value.length);
+
+  // 设置词元映射给自定义组合使用
+  const {setTokensMap} = useCustomGroups();
+  setTokensMap(allTokensFlat.value);
+  console.log('[App] 词元映射设置完成');
+
+  // 然后加载自定义组合
+  console.log('[App] 开始加载自定义组合...');
   await loadCustomGroups();
+  console.log('[App] 自定义组合加载完成，组合数量:', customGroups.value.length);
 
   // 解析初始文本
   if (props.initialText) {
@@ -102,25 +113,6 @@ onUnmounted(() => {
 });
 
 // ===== 方法 =====
-const handleReorderTokens = ({from, to}) => {
-  if (from === to || from < 0 || to < 0 || from >= finalTokens.value.length || to >= finalTokens.value.length) {
-    return;
-  }
-
-  console.log(`重新排序词元: 从 ${from} 移动到 ${to}`);
-
-  // 创建新数组（Vue 响应式要求）
-  const newTokens = [...finalTokens.value];
-  const [movedToken] = newTokens.splice(from, 1);
-  newTokens.splice(to, 0, movedToken);
-
-  finalTokens.value = newTokens;
-
-  // 更新光标位置
-  if (cursorPosition.value.area === 'output') {
-    setCursor('output', to);
-  }
-};
 
 // 解析初始文本
 const parseInitialText = (text) => {
@@ -248,7 +240,7 @@ const handleEditCancel = (index) => {
   console.log('[App] 编辑取消，删除词元');
   // 删除编辑中的词元
   finalTokens.value.splice(index, 1);
-  // 光标回到前一个位置
+
   if (index > 0) {
     setCursor('output', index - 1);
   } else if (finalTokens.value.length > 0) {
@@ -258,6 +250,25 @@ const handleEditCancel = (index) => {
   }
 
   console.log('[App] 编辑取消，重新启用快捷键监听');
+};
+
+// 重新排序词元
+const handleReorderTokens = ({from, to}) => {
+  if (from === to || from < 0 || to < 0 || from >= finalTokens.value.length || to >= finalTokens.value.length) {
+    return;
+  }
+
+  console.log(`重新排序词元: 从 ${from} 移动到 ${to}`);
+
+  const newTokens = [...finalTokens.value];
+  const [movedToken] = newTokens.splice(from, 1);
+  newTokens.splice(to, 0, movedToken);
+
+  finalTokens.value = newTokens;
+
+  if (cursorPosition.value.area === 'output') {
+    setCursor('output', to);
+  }
 };
 
 // 输出语言切换
@@ -273,19 +284,20 @@ const handleOutputLanguageChange = (lang) => {
   });
 };
 
-// 查看语言切换（新增）
+// 查看语言切换
 const handleViewLanguageChange = (lang) => {
   viewLanguage.value = lang;
   updatePreferences({viewLanguage: lang});
 };
 
-// 其他方法保持不变...
+// 词元点击
 const handleTokenClick = (token, index) => {
   setCursor('output', index);
   focusedArea.value = 'output';
   console.log('[App] 词元点击:', token, '索引:', index);
 };
 
+// 词元编辑
 const handleTokenEdit = (token, index) => {
   const newValue = prompt('编辑词元:', token.value);
   if (newValue && newValue.trim()) {
@@ -298,6 +310,7 @@ const handleTokenEdit = (token, index) => {
   }
 };
 
+// 移除词元
 const handleRemoveToken = (index) => {
   finalTokens.value.splice(index, 1);
   if (cursorPosition.value.index >= finalTokens.value.length) {
@@ -305,11 +318,13 @@ const handleRemoveToken = (index) => {
   }
 };
 
+// 词库词元点击
 const handlePoolTokenClick = (token) => {
   console.log('[App] 词库词元被点击:', token);
   insertToken(token);
 };
 
+// 插入词元
 const insertToken = (token, isCustomGroup = false) => {
   const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
       ? cursorPosition.value.index + 1
@@ -317,9 +332,9 @@ const insertToken = (token, isCustomGroup = false) => {
 
   const newToken = {
     id: Date.now() + Math.random(),
-    value: token.en,
-    original: token.en,
-    display: outputLanguage.value === LANGUAGES.ZH ? token.zh : token.en,
+    value: token.en || token.value,
+    original: token.en || token.value,
+    display: outputLanguage.value === LANGUAGES.ZH ? (token.zh || token.value) : (token.en || token.value),
     mapping: token,
     isCustomGroup
   };
@@ -337,6 +352,45 @@ const findTokenMappingByValue = (value) => {
     }
   }
   return null;
+};
+
+// 添加新词元到词库
+const handleAddNewToken = (category, subcategory) => {
+  const zh = prompt('中文:');
+  if (!zh) return;
+
+  const en = prompt('英文:');
+  if (!en) return;
+
+  addNewToken(category, subcategory, {zh, en});
+};
+
+// 使用自定义组合
+const handleUseCustomGroup = (group) => {
+  const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
+      ? cursorPosition.value.index + 1
+      : finalTokens.value.length;
+
+  const placeholderToken = {
+    id: `custom_pool_${group.key}_${Date.now()}`,
+    value: `{%${group.key}%}`,
+    original: `{%${group.key}%}`,
+    display: group.zh || group.en || group.key,
+    mapping: null,
+    isCustomPool: true,
+    poolKey: group.key,
+    poolData: group
+  };
+
+  finalTokens.value.splice(pos, 0, placeholderToken);
+  setCursor('output', pos);
+
+  console.log('[App] 插入词元池占位符:', placeholderToken);
+};
+
+// 使用自定义词元
+const handleUseCustomToken = (token) => {
+  insertToken(token, true);
 };
 
 // 显示组合对话框
@@ -415,17 +469,6 @@ const handleTokenSelected = (token) => {
   }
 };
 
-// 添加新词元到词库
-const handleAddNewToken = (category, subcategory) => {
-  const zh = prompt('中文:');
-  if (!zh) return;
-
-  const en = prompt('英文:');
-  if (!en) return;
-
-  addNewToken(category, subcategory, {zh, en});
-};
-
 // 获取焦点提示
 const getFocusTips = () => {
   if (hasEditingToken.value) {
@@ -471,21 +514,17 @@ const handleCancel = () => {
   <Transition name="modal">
     <div v-if="true" class="lxh-modal-overlay" @click.self="handleCancel" @mousedown.stop>
       <div class="lxh-modal-content" @mousedown.stop>
-        <!-- 头部 -->
         <div class="lxh-modal-header">
           <div class="header-left">
             <h3>✨ LXH Prompt 编辑器</h3>
-            <!-- 编辑状态指示器 -->
             <span v-if="hasEditingToken" class="editing-indicator">
-              ✏️ 编辑中...
+              ✏✏️ 编辑中...
             </span>
           </div>
           <button class="close-btn" @click="handleCancel">&times;</button>
         </div>
 
-        <!-- 主体内容区 -->
         <div class="lxh-modal-body">
-          <!-- 最终输出区 -->
           <FinalOutput
               :tokens="finalTokens"
               :mode="outputMode"
@@ -505,34 +544,34 @@ const handleCancel = () => {
               @edit-cancel="handleEditCancel"
           />
 
-          <!-- 下方分栏区域 -->
           <div class="bottom-panels">
-            <!-- 左侧：自定义词元组合池 -->
+            <!-- 左侧：单点词库功能（暂时保留为空） -->
             <div class="left-panel">
-              <CustomTokenPool
-                  :groups="customGroups"
-                  :focused="focusedArea === 'custom'"
-                  :language="viewLanguage"
-                  @add-token="showGroupDialog(null)"
-                  @edit-group="showGroupDialog"
-                  @delete-group="handleDeleteGroup"
-                  @use-token="handleUseToken"
-                  @use-group="handleUseGroup"
-                  @update-weight="handleUpdateWeight"
-                  @remove-token="handleRemoveTokenFromGroup"
-                  @add-token-to-group="handleAddTokenToGroup"
-                  @click="focusedArea = 'custom'"
-              />
+              <div class="single-token-panel">
+                <div class="panel-header">
+                  <h4>🎯 单点词库</h4>
+                </div>
+                <div class="panel-content">
+                  <div class="placeholder-text">
+                    功能开发中...
+                    <br>
+                    <small>将用于单点词元的编辑和管理</small>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- 右侧：词元映射池 -->
+            <!-- 右侧：整合后的词元映射池（包含自定义词元池） -->
             <div class="right-panel">
               <TokenPool
                   :categories="tokenCategories"
+                  :custom-groups="customGroups"
                   :language="viewLanguage"
                   :focused="focusedArea === 'pool'"
                   @token-click="handlePoolTokenClick"
                   @add-token="handleAddNewToken"
+                  @use-custom-group="handleUseCustomGroup"
+                  @use-custom-token="handleUseCustomToken"
                   @click="focusedArea = 'pool'"
               />
             </div>
@@ -556,7 +595,7 @@ const handleCancel = () => {
         </div>
       </div>
 
-      <!-- 组合编辑对话框 -->
+      <!-- 保持原有的对话框 -->
       <GroupDialog
           v-if="showingGroupDialog"
           :group="editingGroup"
@@ -565,7 +604,6 @@ const handleCancel = () => {
           @confirm="handleGroupConfirm"
       />
 
-      <!-- 词元选择器 -->
       <TokenSelector
           v-if="showingTokenSelector"
           :all-tokens="allTokensFlat"
@@ -578,7 +616,58 @@ const handleCancel = () => {
 </template>
 
 <style scoped>
-/* 保持之前的样式不变 */
+/* 新增单点词库面板样式 */
+.single-token-panel {
+  background: #252525;
+  border-radius: 8px;
+  border: 1px solid #404040;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #404040;
+  background: #2a2a2a;
+}
+
+.panel-header h4 {
+  margin: 0;
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.placeholder-text {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.placeholder-text small {
+  color: #444;
+  font-size: 12px;
+}
+
+/* 调整布局 */
+.bottom-panels {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px 1fr; /* 调整左侧宽度 */
+  gap: 16px;
+  min-height: 0;
+}
+
 .lxh-modal-overlay {
   position: fixed !important;
   top: 0 !important;

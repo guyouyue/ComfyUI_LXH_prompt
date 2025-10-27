@@ -82,6 +82,7 @@
                 :class="{
                   'cursor-active': cursorIndex === index,
                   'no-mapping': !token.mapping,
+                  'custom-pool': token.isCustomPool,
                   'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'original',
                   'drop-target': dropTargetIndex === index && dropTargetArea === 'original',
                   'long-press-active': longPressActive && longPressToken.area === 'original' && longPressToken.index === index,
@@ -556,11 +557,17 @@ const handleMappedTokenClick = (token, index) => {
 
 // 获取查看区域的词元显示（使用viewLanguage）
 const getViewTokenDisplay = (token) => {
+  // 处理词元池占位符
+  if (token.isCustomPool && token.poolData) {
+    return props.viewLanguage === 'zh'
+        ? (token.poolData.zh || token.poolData.key)
+        : (token.poolData.en || token.poolData.key);
+  }
+
   if (!token.mapping) {
     return token.original || token.value;
   }
 
-  // 根据查看语言选择显示内容 - 添加空值检查
   switch (props.viewLanguage) {
     case 'zh':
       return token.mapping?.zh || token.zh || token.value;
@@ -575,11 +582,15 @@ const getViewTokenDisplay = (token) => {
 
 // 获取映射输出区域的词元显示 - 修复空值问题
 const getMappedTokenDisplay = (token) => {
+  // 处理词元池占位符 - 显示 {%key%}
+  if (token.isCustomPool) {
+    return token.value; // 返回 {%key%}
+  }
+
   if (props.mode === 'natural') {
     return token.display || token.value;
   }
 
-  // 根据输出语言选择显示内容 - 添加空值检查
   switch (props.language) {
     case 'zh':
       return token.mapping?.zh || token.zh || token.value;
@@ -607,9 +618,16 @@ const getFinalTextPreview = () => {
 // 修复原始词元标题的空值问题
 const getOriginalTokenTitle = (token) => {
   const parts = [];
-  if (token.mapping) {
+
+  if (token.isCustomPool) {
+    parts.push('🎲 词元池占位符');
+    parts.push(`Key: ${token.poolKey}`);
+    parts.push(`中文名: ${token.poolData?.zh || '无'}`);
+    parts.push(`英文名: ${token.poolData?.en || '无'}`);
+    parts.push(`候选词元: ${token.poolData?.parsedTokens?.length || 0} 个`);
+    parts.push('最终输出: ' + token.value);
+  } else if (token.mapping) {
     parts.push('已映射');
-    // 根据查看语言显示对应信息 - 添加空值检查
     switch (props.viewLanguage) {
       case 'zh':
         parts.push(`中文查看: ${token.mapping?.zh || '无'}`);
@@ -630,6 +648,7 @@ const getOriginalTokenTitle = (token) => {
   } else {
     parts.push('未映射');
   }
+
   parts.push('双击编辑 | 长按1秒拖拽');
   return parts.join(' | ');
 };
@@ -1242,4 +1261,25 @@ watch(() => props.focused, (newVal) => {
   user-select: none;
   -webkit-user-select: none;
 }
+
+.token-tag.custom-pool {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: 2px solid #764ba2 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-family: 'Consolas', 'Monaco', monospace;
+  letter-spacing: 0.5px;
+}
+
+.token-tag.custom-pool:hover {
+  box-shadow: 0 4px 16px rgba(118, 75, 162, 0.5) !important;
+}
+
+.token-tag.custom-pool.cursor-active {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4),
+  0 4px 16px rgba(118, 75, 162, 0.6) !important;
+}
+
 </style>
