@@ -4,6 +4,7 @@ import FinalOutput from './components/FinalOutput.vue';
 import TokenPool from './components/TokenPool.vue';
 import GroupDialog from './components/GroupDialog.vue';
 import TokenSelector from './components/TokenSelector.vue';
+import TokenEditor from './components/TokenEditor.vue';
 
 import {useTokens} from './composables/useTokens.js';
 import {useCustomGroups} from './composables/useCustomGroups.js';
@@ -12,8 +13,6 @@ import {useStorage} from './composables/useStorage.js';
 
 import {getAllTokensFlat, parseTextToTokens, tokensToText} from './utils/tokenParser.js';
 import {FOCUS_AREAS, LANGUAGES, OUTPUT_MODES} from './utils/constants.js';
-
-console.log('[LXH Prompt Vue] 组件开始初始化');
 
 const props = defineProps({
   initialText: String,
@@ -52,6 +51,11 @@ const editingGroup = ref(null);
 const showingTokenSelector = ref(false);
 const currentGroupForToken = ref(null);
 
+// 左侧面板编辑状态
+const editingToken = ref(null);
+const editingTokenType = ref('single'); // 'single', 'unmapped', 'pool'
+const showEditor = ref(false); // 是否显示编辑器
+
 // ===== 计算属性 =====
 const finalText = computed(() => {
   return tokensToText(finalTokens.value, outputMode.value, outputLanguage.value);
@@ -61,16 +65,25 @@ const allTokensFlat = computed(() => {
   return getAllTokensFlat(tokenCategories.value);
 });
 
-// 检查是否有词元正在编辑
 const hasEditingToken = computed(() => {
   return finalTokens.value.some(token => token.isEditing);
 });
 
+// 统计信息
+const mappedTokensCount = computed(() => {
+  return finalTokens.value.filter(t => t.mapping && !t.isCustomPool).length;
+});
+
+const unmappedTokensCount = computed(() => {
+  return finalTokens.value.filter(t => !t.mapping && !t.isCustomPool && !t.isEditing).length;
+});
+
+const poolTokensCount = computed(() => {
+  return finalTokens.value.filter(t => t.isCustomPool).length;
+});
+
 // ===== 生命周期 =====
 onMounted(async () => {
-  console.log('[LXH Prompt Vue] 组件已挂载');
-
-  // 加载偏好设置
   loadPreferences();
 
   if (preferences.value.outputMode) {
@@ -83,54 +96,33 @@ onMounted(async () => {
     viewLanguage.value = preferences.value.viewLanguage;
   }
 
-  // 先加载词库数据
-  console.log('[App] 开始加载词库数据...');
   await loadTokenData();
-  console.log('[App] 词库数据加载完成，词元数量:', allTokensFlat.value.length);
-
-  // 设置词元映射给自定义组合使用
   const {setTokensMap} = useCustomGroups();
   setTokensMap(allTokensFlat.value);
-  console.log('[App] 词元映射设置完成');
-
-  // 然后加载自定义组合
-  console.log('[App] 开始加载自定义组合...');
   await loadCustomGroups();
-  console.log('[App] 自定义组合加载完成，组合数量:', customGroups.value.length);
 
-  // 解析初始文本
   if (props.initialText) {
     parseInitialText(props.initialText);
   }
 
-  // 监听键盘事件
   document.addEventListener('keydown', handleKeyDown);
 });
 
 onUnmounted(() => {
-  console.log('[LXH Prompt Vue] 组件即将卸载');
   document.removeEventListener('keydown', handleKeyDown);
 });
 
 // ===== 方法 =====
-
-// 解析初始文本
 const parseInitialText = (text) => {
   finalTokens.value = parseTextToTokens(text, tokenCategories.value, outputMode.value);
-
-  // 确保每个词元都有原始值
   finalTokens.value.forEach(token => {
     if (!token.original) {
       token.original = token.value;
     }
   });
-
-  console.log('[LXH Prompt Vue] 解析初始文本，得到', finalTokens.value.length, '个词元');
 };
 
-// 键盘事件处理
 const handleKeyDown = (e) => {
-  // 防止在对话框打开时触发
   if (showingGroupDialog.value || showingTokenSelector.value) {
     if (e.key === 'Escape') {
       showingGroupDialog.value = false;
@@ -139,34 +131,26 @@ const handleKeyDown = (e) => {
     return;
   }
 
-  // 如果有词元正在编辑中，不处理全局快捷键（除了 Esc 和 Ctrl+Enter）
   if (hasEditingToken.value) {
-    // 只允许 Esc 和 Ctrl+Enter
     if (e.key === 'Escape') {
       handleCancel();
     } else if (e.ctrlKey && e.key === 'Enter') {
-      // 如果正在编辑，先完成编辑再确认
       const editingIndex = finalTokens.value.findIndex(t => t.isEditing);
       if (editingIndex !== -1) {
         handleEditConfirm(editingIndex);
       }
-      // 稍微延迟一下再确认，让编辑完成
       setTimeout(() => {
         handleConfirm();
       }, 100);
     }
-    // 其他按键（包括空格）不处理，让输入框自己处理
     return;
   }
 
-  // 没有词元在编辑时，处理正常的快捷键
   if (e.key === 'Escape') {
     handleCancel();
   } else if (e.ctrlKey && e.key === 'Enter') {
     handleConfirm();
   } else if (e.key === ' ' && focusedArea.value === FOCUS_AREAS.OUTPUT) {
-    // 空格键：在光标后插入新的编辑词元
-    // 检查是否有词元被选中
     if (cursorPosition.value.index !== null) {
       e.preventDefault();
       handleInsertNewToken();
@@ -174,7 +158,6 @@ const handleKeyDown = (e) => {
   }
 };
 
-// 插入新的可编辑词元
 const handleInsertNewToken = () => {
   const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
       ? cursorPosition.value.index + 1
@@ -191,20 +174,15 @@ const handleInsertNewToken = () => {
 
   finalTokens.value.splice(pos, 0, newToken);
   setCursor('output', pos);
-
-  console.log('[App] 插入新的编辑词元，位置:', pos);
 };
 
-// 编辑确认
 const handleEditConfirm = (index) => {
   const token = finalTokens.value[index];
   if (!token || !token.isEditing) return;
 
   const value = token.value.trim();
 
-  // 如果为空，删除这个词元
   if (!value) {
-    console.log('[App] 编辑内容为空，删除词元');
     finalTokens.value.splice(index, 1);
     if (index > 0) {
       setCursor('output', index - 1);
@@ -212,12 +190,8 @@ const handleEditConfirm = (index) => {
     return;
   }
 
-  // 查找映射
   const mapping = findTokenMappingByValue(value);
 
-  console.log('[App] 编辑确认，值:', value, '找到映射:', !!mapping);
-
-  // 转换为正式词元
   finalTokens.value[index] = {
     id: `token_${Date.now()}_${Math.random()}`,
     value: value,
@@ -229,16 +203,10 @@ const handleEditConfirm = (index) => {
     isEditing: false
   };
 
-  // 移动光标到当前位置（保持选中）
   setCursor('output', index);
-
-  console.log('[App] 编辑完成，重新启用快捷键监听');
 };
 
-// 编辑取消
 const handleEditCancel = (index) => {
-  console.log('[App] 编辑取消，删除词元');
-  // 删除编辑中的词元
   finalTokens.value.splice(index, 1);
 
   if (index > 0) {
@@ -248,17 +216,12 @@ const handleEditCancel = (index) => {
   } else {
     setCursor('output', null);
   }
-
-  console.log('[App] 编辑取消，重新启用快捷键监听');
 };
 
-// 重新排序词元
 const handleReorderTokens = ({from, to}) => {
   if (from === to || from < 0 || to < 0 || from >= finalTokens.value.length || to >= finalTokens.value.length) {
     return;
   }
-
-  console.log(`重新排序词元: 从 ${from} 移动到 ${to}`);
 
   const newTokens = [...finalTokens.value];
   const [movedToken] = newTokens.splice(from, 1);
@@ -271,12 +234,10 @@ const handleReorderTokens = ({from, to}) => {
   }
 };
 
-// 输出语言切换
 const handleOutputLanguageChange = (lang) => {
   outputLanguage.value = lang;
   updatePreferences({outputLanguage: lang});
 
-  // 更新所有词元的显示（用于输出）
   finalTokens.value.forEach(token => {
     if (token.mapping) {
       token.display = lang === LANGUAGES.ZH ? token.mapping.zh : token.mapping.en;
@@ -284,33 +245,23 @@ const handleOutputLanguageChange = (lang) => {
   });
 };
 
-// 查看语言切换
 const handleViewLanguageChange = (lang) => {
   viewLanguage.value = lang;
   updatePreferences({viewLanguage: lang});
 };
 
-// 词元点击
 const handleTokenClick = (token, index) => {
   setCursor('output', index);
   focusedArea.value = 'output';
-  console.log('[App] 词元点击:', token, '索引:', index);
 };
 
-// 词元编辑
+// 修改：双击输出区词元时打开编辑器
 const handleTokenEdit = (token, index) => {
-  const newValue = prompt('编辑词元:', token.value);
-  if (newValue && newValue.trim()) {
-    finalTokens.value[index].value = newValue.trim();
-    const mapping = findTokenMappingByValue(newValue.trim());
-    finalTokens.value[index].mapping = mapping;
-    finalTokens.value[index].display = mapping
-        ? (outputLanguage.value === LANGUAGES.ZH ? mapping.zh : mapping.en)
-        : newValue.trim();
-  }
+  const tokenType = token.isCustomPool ? 'pool' :
+      token.mapping ? 'single' : 'unmapped';
+  openTokenEditor(token, tokenType);
 };
 
-// 移除词元
 const handleRemoveToken = (index) => {
   finalTokens.value.splice(index, 1);
   if (cursorPosition.value.index >= finalTokens.value.length) {
@@ -318,13 +269,18 @@ const handleRemoveToken = (index) => {
   }
 };
 
-// 词库词元点击
+// 修改：点击词库词元时打开编辑器
 const handlePoolTokenClick = (token) => {
-  console.log('[App] 词库词元被点击:', token);
+  console.log('[App] 词库词元被点击，打开编辑器:', token);
+  openTokenEditor(token, 'single');
+};
+
+// 双击词库词元时插入到输出区
+const handlePoolTokenDoubleClick = (token) => {
+  console.log('[App] 词库词元被双击，插入到输出区:', token);
   insertToken(token);
 };
 
-// 插入词元
 const insertToken = (token, isCustomGroup = false) => {
   const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
       ? cursorPosition.value.index + 1
@@ -343,7 +299,6 @@ const insertToken = (token, isCustomGroup = false) => {
   setCursor('output', pos);
 };
 
-// 查找词元映射
 const findTokenMappingByValue = (value) => {
   const lowerValue = value.toLowerCase();
   for (const token of allTokensFlat.value) {
@@ -354,7 +309,6 @@ const findTokenMappingByValue = (value) => {
   return null;
 };
 
-// 添加新词元到词库
 const handleAddNewToken = (category, subcategory) => {
   const zh = prompt('中文:');
   if (!zh) return;
@@ -365,7 +319,6 @@ const handleAddNewToken = (category, subcategory) => {
   addNewToken(category, subcategory, {zh, en});
 };
 
-// 使用自定义组合
 const handleUseCustomGroup = (group) => {
   const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
       ? cursorPosition.value.index + 1
@@ -384,131 +337,101 @@ const handleUseCustomGroup = (group) => {
 
   finalTokens.value.splice(pos, 0, placeholderToken);
   setCursor('output', pos);
-
-  console.log('[App] 插入词元池占位符:', placeholderToken);
 };
 
-// 使用自定义词元
 const handleUseCustomToken = (token) => {
   insertToken(token, true);
 };
 
-// 显示组合对话框
-const showGroupDialog = (group) => {
-  editingGroup.value = group ? {...group} : null;
-  showingGroupDialog.value = true;
-};
-
-// 组合确认
 const handleGroupConfirm = (groupData) => {
   if (editingGroup.value) {
-    // 编辑
     updateCustomGroup(editingGroup.value.id, groupData);
   } else {
-    // 新增
     addCustomGroup(groupData);
   }
   showingGroupDialog.value = false;
   editingGroup.value = null;
 };
 
-// 删除组合
-const handleDeleteGroup = (groupId) => {
-  if (confirm('确定要删除这个组合吗？')) {
-    deleteCustomGroup(groupId);
-  }
+// 打开词元编辑器（在左侧面板）
+const openTokenEditor = (token, type = 'single') => {
+  editingToken.value = token;
+  editingTokenType.value = type;
+  showEditor.value = true;
+  console.log('[App] 打开词元编辑器:', type, token);
 };
 
-// 使用词元
-const handleUseToken = (token) => {
-  insertToken(token, true);
-};
-
-// 使用组合（随机选择）
-const handleUseGroup = (groupId) => {
-  const selectedToken = selectRandomToken(groupId);
-  if (selectedToken) {
-    insertToken(selectedToken, true);
-  } else {
-    alert('该组合没有候选词元');
-  }
-};
-
-// 更新权重
-const handleUpdateWeight = (groupId, tokenId, weight) => {
-  updateTokenWeight(groupId, tokenId, weight);
-};
-
-// 从组合中移除词元
-const handleRemoveTokenFromGroup = (groupId, tokenId) => {
-  if (confirm('确定要移除这个词元吗？')) {
-    removeTokenFromGroup(groupId, tokenId);
-  }
-};
-
-// 添加词元到组合
-const handleAddTokenToGroup = (groupId) => {
-  currentGroupForToken.value = groupId;
-  showingTokenSelector.value = true;
-};
-
-// 词元选择完成
-const handleTokenSelected = (token) => {
-  if (currentGroupForToken.value) {
-    const weight = prompt('设置权重 (0-10):', '1');
-    if (weight !== null) {
-      const weightNum = parseFloat(weight);
-      if (!isNaN(weightNum) && weightNum >= 0 && weightNum <= 10) {
-        addTokenToGroup(currentGroupForToken.value, {
-          ...token,
-          weight: weightNum
-        });
-      }
-    }
-    currentGroupForToken.value = null;
-  }
-};
-
-// 获取焦点提示
-const getFocusTips = () => {
-  if (hasEditingToken.value) {
-    return '正在编辑词元中... (回车确认 | ESC取消)';
-  }
-
-  const tips = {
-    output: '点击词元选中 | 空格插入新词元 | 双击词元编辑',
-    custom: '双击词元使用 | 点击🎲随机选择',
-    pool: '双击词元添加到输出区'
+// 打开新建词元编辑器
+const openNewTokenEditor = () => {
+  editingToken.value = {
+    id: `user_${Date.now()}`,
+    zh: '',
+    en: '',
+    jp: '',
+    source: 'user'
   };
-  return tips[focusedArea.value] || '点击区域后双击词库添加词元';
+  editingTokenType.value = 'single';
+  showEditor.value = true;
 };
 
-// 确认
-const handleConfirm = () => {
-  // 如果还有词元在编辑中，先提示
-  if (hasEditingToken.value) {
-    alert('请先完成词元编辑（回车确认或ESC取消）');
-    return;
+// 处理词元保存
+// 在 handleTokenSave 方法中添加对新分类的处理
+const handleTokenSave = (saveData) => {
+  console.log('[App] 保存词元数据:', saveData);
+
+  // 处理新分类创建
+  if (saveData.newCategory) {
+    handleNewCategoryCreation(saveData.newCategory);
   }
 
-  console.log('[LXH Prompt Vue] 确认，返回文本:', finalText.value);
-  updatePreferences({outputMode: outputMode.value});
-  emit('close', finalText.value);
-};
-
-// 取消
-const handleCancel = () => {
-  // 如果有词元在编辑中，询问是否放弃
-  if (hasEditingToken.value) {
-    if (!confirm('有词元正在编辑中，确定要放弃编辑并关闭吗？')) {
-      return;
-    }
+  if (saveData.tokenType === 'single') {
+    handleSingleTokenSave(saveData);
+  } else if (saveData.tokenType === 'unmapped') {
+    handleUnmappedTokenSave(saveData);
+  } else if (saveData.tokenType === 'pool') {
+    handlePoolTokenSave(saveData);
   }
 
-  console.log('[LXH Prompt Vue] 取消');
-  emit('close', null);
+  showEditor.value = false;
 };
 
+// 新增方法：处理新分类创建
+const handleNewCategoryCreation = (categoryData) => {
+  console.log('[App] 创建新分类:', categoryData);
+  // 这里可以调用API创建新分类，然后更新本地分类数据
+  alert(`✅ 新分类 "${categoryData.name}" 已创建（功能待实现）`);
+};
+
+const handleSingleTokenSave = async (saveData) => {
+  console.log('[App] 保存单个词元:', saveData);
+  alert('✅ 词元已保存（功能待实现）');
+};
+
+const handleUnmappedTokenSave = async (saveData) => {
+  console.log('[App] 保存未映射词元:', saveData);
+  alert('✅ 未映射词元已保存（功能待实现）');
+};
+
+const handlePoolTokenSave = (saveData) => {
+  console.log('[App] 保存词元池:', saveData);
+  alert('✅ 词元池已更新（功能待实现）');
+};
+
+const handleViewMappedToken = (token) => {
+  openTokenEditor(token, 'single');
+};
+
+const handleEditPoolToken = (token, index) => {
+  openTokenEditor(token, 'single');
+};
+
+// 点击词元池项目打开编辑器
+const handlePoolItemClick = (poolItem) => {
+  console.log('[App] 词元池项目被点击，打开编辑器:', poolItem);
+  openTokenEditor(poolItem, 'pool');
+};
+
+// 双击词元池项目插入到输出区
 const handleUsePoolItem = (poolItem) => {
   const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
       ? cursorPosition.value.index + 1
@@ -527,11 +450,8 @@ const handleUsePoolItem = (poolItem) => {
 
   finalTokens.value.splice(pos, 0, placeholderToken);
   setCursor('output', pos);
-
-  console.log('[App] 插入词元池占位符:', placeholderToken);
 };
 
-// 获取池项目的显示名称（根据当前语言）
 const getPoolItemDisplayName = (poolItem) => {
   if (poolItem.name) {
     return viewLanguage.value === 'zh' ? poolItem.name.zh : poolItem.name.en;
@@ -539,6 +459,54 @@ const getPoolItemDisplayName = (poolItem) => {
   return poolItem.description || poolItem.id;
 };
 
+const handleTokenSelected = (token) => {
+  if (currentGroupForToken.value) {
+    const weight = prompt('设置权重 (0-10):', '1');
+    if (weight !== null) {
+      const weightNum = parseFloat(weight);
+      if (!isNaN(weightNum) && weightNum >= 0 && weightNum <= 10) {
+        addTokenToGroup(currentGroupForToken.value, {
+          ...token,
+          weight: weightNum
+        });
+      }
+    }
+    currentGroupForToken.value = null;
+  }
+};
+
+const getFocusTips = () => {
+  if (hasEditingToken.value) {
+    return '正在编辑词元中... (回车确认 | ESC取消)';
+  }
+
+  const tips = {
+    output: '点击词元选中 | 空格插入新词元 | 双击词元编辑',
+    custom: '双击词元使用 | 点击🎲随机选择',
+    pool: '单击词元/词元池编辑 | 双击添加到输出区'
+  };
+  return tips[focusedArea.value] || '点击区域后双击词库添加词元';
+};
+
+const handleConfirm = () => {
+  if (hasEditingToken.value) {
+    alert('请先完成词元编辑（回车确认或ESC取消）');
+    return;
+  }
+
+  updatePreferences({outputMode: outputMode.value});
+  emit('close', finalText.value);
+};
+
+const handleCancel = () => {
+  if (hasEditingToken.value) {
+    if (!confirm('有词元正在编辑中，确定要放弃编辑并关闭吗？')) {
+      return;
+    }
+  }
+
+  emit('close', null);
+};
 </script>
 
 <template>
@@ -549,7 +517,7 @@ const getPoolItemDisplayName = (poolItem) => {
           <div class="header-left">
             <h3>✨ LXH Prompt 编辑器</h3>
             <span v-if="hasEditingToken" class="editing-indicator">
-              ✏✏️ 编辑中...
+              ✏️ 编辑中...
             </span>
           </div>
           <button class="close-btn" @click="handleCancel">&times;</button>
@@ -576,23 +544,80 @@ const getPoolItemDisplayName = (poolItem) => {
           />
 
           <div class="bottom-panels">
-            <!-- 左侧：单点词库功能（暂时保留为空） -->
+            <!-- 左侧：词元编辑面板 -->
             <div class="left-panel">
-              <div class="single-token-panel">
+              <div class="token-editor-panel">
                 <div class="panel-header">
-                  <h4>🎯 单点词库</h4>
+                  <h4>✏️ 词元编辑</h4>
+                  <div class="panel-controls">
+                    <button
+                        class="add-token-btn"
+                        @click="openNewTokenEditor"
+                        title="添加新词元到用户词库"
+                    >
+                      ＋ 新建词元
+                    </button>
+                  </div>
                 </div>
                 <div class="panel-content">
-                  <div class="placeholder-text">
-                    功能开发中...
-                    <br>
-                    <small>将用于单点词元的编辑和管理</small>
+                  <!-- 显示编辑器或默认内容 -->
+                  <TokenEditor
+                      v-if="showEditor"
+                      :token="editingToken"
+                      :token-type="editingTokenType"
+                      :categories="tokenCategories"
+                      :language="viewLanguage"
+                      :is-embedded="true"
+                      @close="showEditor = false"
+                      @save="handleTokenSave"
+                      @view-token="handleViewMappedToken"
+                      @edit-token="handleEditPoolToken"
+                  />
+                  <div v-else class="editor-intro">
+                    <h5>编辑功能说明</h5>
+                    <ul class="feature-list">
+                      <li>
+                        <span class="feature-icon">📝</span>
+                        <span class="feature-text">双击输出区词元进行编辑</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">👆</span>
+                        <span class="feature-text">单击词库词元查看/编辑</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">🎲</span>
+                        <span class="feature-text">单击词元池管理权重和内容</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">⚙️</span>
+                        <span class="feature-text">系统词元会创建用户副本</span>
+                      </li>
+                    </ul>
+
+                    <div class="quick-stats">
+                      <div class="stat-item">
+                        <span class="stat-label">总词元数</span>
+                        <span class="stat-value">{{ finalTokens.length }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">已映射</span>
+                        <span class="stat-value">{{ mappedTokensCount }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">未映射</span>
+                        <span class="stat-value">{{ unmappedTokensCount }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">词元池</span>
+                        <span class="stat-value">{{ poolTokensCount }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- 右侧：整合后的词元映射池（包含自定义词元池） -->
+            <!-- 右侧：词元映射池 -->
             <div class="right-panel">
               <TokenPool
                   :categories="tokenCategories"
@@ -600,9 +625,9 @@ const getPoolItemDisplayName = (poolItem) => {
                   :language="viewLanguage"
                   :focused="focusedArea === 'pool'"
                   @token-click="handlePoolTokenClick"
+                  @token-dblclick="handlePoolTokenDoubleClick"
+                  @pool-item-click="handlePoolItemClick"
                   @add-token="handleAddNewToken"
-                  @use-custom-group="handleUseCustomGroup"
-                  @use-custom-token="handleUseCustomToken"
                   @use-pool-item="handleUsePoolItem"
                   @click="focusedArea = 'pool'"
               />
@@ -627,7 +652,6 @@ const getPoolItemDisplayName = (poolItem) => {
         </div>
       </div>
 
-      <!-- 保持原有的对话框 -->
       <GroupDialog
           v-if="showingGroupDialog"
           :group="editingGroup"
@@ -648,8 +672,8 @@ const getPoolItemDisplayName = (poolItem) => {
 </template>
 
 <style scoped>
-/* 新增单点词库面板样式 */
-.single-token-panel {
+/* 词元编辑面板样式 */
+.token-editor-panel {
   background: #252525;
   border-radius: 8px;
   border: 1px solid #404040;
@@ -662,6 +686,9 @@ const getPoolItemDisplayName = (poolItem) => {
   padding: 12px 16px;
   border-bottom: 1px solid #404040;
   background: #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .panel-header h4 {
@@ -671,31 +698,99 @@ const getPoolItemDisplayName = (poolItem) => {
   font-weight: 600;
 }
 
+.panel-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.add-token-btn {
+  padding: 4px 12px;
+  background: #0d7dd8;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-token-btn:hover {
+  background: #0c6dba;
+}
+
 .panel-content {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.editor-intro {
   padding: 20px;
 }
 
-.placeholder-text {
-  text-align: center;
-  color: #666;
-  font-size: 14px;
-  line-height: 1.6;
+.editor-intro h5 {
+  margin: 0 0 16px 0;
+  color: #0d7dd8;
+  font-size: 13px;
 }
 
-.placeholder-text small {
-  color: #444;
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  color: #ddd;
   font-size: 12px;
 }
 
-/* 调整布局 */
+.feature-icon {
+  font-size: 16px;
+}
+
+.feature-text {
+  flex: 1;
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.stat-item {
+  background: #1e1e1e;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0d7dd8;
+}
+
+/* 其他样式保持不变 */
 .bottom-panels {
   flex: 1;
   display: grid;
-  grid-template-columns: 300px 1fr; /* 调整左侧宽度 */
+  grid-template-columns: 450px 1fr;
   gap: 16px;
   min-height: 0;
 }
@@ -755,7 +850,6 @@ h3 {
   font-weight: 600;
 }
 
-/* 编辑状态指示器 */
 .editing-indicator {
   display: inline-flex;
   align-items: center;
@@ -808,14 +902,6 @@ h3 {
   overflow: hidden;
   padding: 16px;
   gap: 16px;
-}
-
-.bottom-panels {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 16px;
-  min-height: 0;
 }
 
 .left-panel,

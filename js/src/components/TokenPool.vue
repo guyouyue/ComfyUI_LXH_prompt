@@ -45,7 +45,8 @@
                     v-for="poolItem in group.pool"
                     :key="poolItem.id"
                     class="pool-item-tag"
-                    @dblclick="handlePoolItemDoubleClick(poolItem)"
+                    @click="handlePoolItemClick(poolItem)"
+                    @dblclick.stop="handlePoolItemDoubleClick(poolItem)"
                     :title="getPoolItemTooltip(poolItem)"
                 >
                   <span class="pool-item-icon">🎲</span>
@@ -107,7 +108,8 @@
                     :key="token.id"
                     class="token-tag"
                     :class="[token.source, { 'no-mapping': !token.mapping }]"
-                    @dblclick="$emit('token-click', token)"
+                    @click="handleTokenClick(token)"
+                    @dblclick.stop="handleTokenDoubleClick(token)"
                     :title="getTokenTooltip(token)"
                 >
                   <span class="token-text">{{ getDisplayText(token) }}</span>
@@ -139,7 +141,14 @@ const props = defineProps({
   focused: Boolean
 });
 
-const emit = defineEmits(['token-click', 'add-token', 'use-pool-item']);
+// 修改 emit 声明，添加新事件
+const emit = defineEmits([
+  'token-click',      // 单击词元（打开编辑器）
+  'token-dblclick',   // 双击词元（插入到输出区）
+  'pool-item-click',  // 单击词元池（打开编辑器）
+  'add-token',
+  'use-pool-item'     // 双击词元池（插入到输出区）
+]);
 
 const searchQuery = ref('');
 
@@ -210,9 +219,25 @@ const getFilteredCustomPoolCount = () => {
   }
 };
 
-// 双击词元池项目
+const handleTokenClick = (token) => {
+  console.log('[TokenPool] 单击词元，打开编辑器:', token);
+  emit('token-click', token);
+};
+
+const handleTokenDoubleClick = (token) => {
+  console.log('[TokenPool] 双击词元，插入到输出区:', token);
+  emit('token-dblclick', token);
+};
+
+// 修改：处理词元池项目的单击
+const handlePoolItemClick = (poolItem) => {
+  console.log('[TokenPool] 单击词元池项目，打开编辑器:', poolItem);
+  emit('pool-item-click', poolItem);
+};
+
+// 原有的双击处理改名
 const handlePoolItemDoubleClick = (poolItem) => {
-  console.log('[TokenPool] 双击词元池项目:', poolItem);
+  console.log('[TokenPool] 双击词元池项目，插入到输出区:', poolItem);
   emit('use-pool-item', poolItem);
 };
 
@@ -831,4 +856,76 @@ h4 {
     padding: 6px 10px;
   }
 }
+
+.token-tag {
+  cursor: pointer;
+  position: relative;
+}
+
+.token-tag::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 125, 216, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.token-tag:active::after {
+  opacity: 1;
+}
+
+.pool-item-tag {
+  cursor: pointer;
+  position: relative;
+}
+
+.pool-item-tag::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.pool-item-tag:active::after {
+  opacity: 1;
+}
+
+/* 添加提示文本（可选） */
+.token-tag:hover::before,
+.pool-item-tag:hover::before {
+  content: '单击编辑 | 双击插入';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 100;
+}
+
+.token-tag:hover::before,
+.pool-item-tag:hover::before {
+  opacity: 1;
+  transition-delay: 0.5s;
+}
+
 </style>
