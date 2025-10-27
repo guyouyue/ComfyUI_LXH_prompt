@@ -420,49 +420,172 @@
           <div class="token-list">
             <div
                 v-for="(token, index) in poolTokens"
-                :key="token.id"
+                :key="token.id || index"
                 class="pool-token-item"
-                :class="{ 'mapped-token': token.mapping }"
+                :class="{
+                  'mapped-token': token.isReference,
+                  'editing-token': editingPoolTokenIndex === index
+                }"
             >
-              <div class="token-content">
+              <!-- 非编辑状态：展示模式 -->
+              <div v-if="editingPoolTokenIndex !== index" class="token-content">
                 <span class="token-index">#{{ index + 1 }}</span>
 
-                <div class="token-info">
-                  <div class="token-text">
-                    <span class="lang-zh" v-if="token.zh">{{ token.zh }}</span>
-                    <span class="lang-en" v-if="token.en">{{ token.en }}</span>
-                    <span class="token-original" v-if="!token.zh && !token.en">{{ token.value }}</span>
+                <div class="token-info-detailed">
+                  <!-- 词元类型标签 -->
+                  <div class="token-header">
+                    <span v-if="token.isReference" class="type-badge reference">
+                      🔗 引用词元
+                    </span>
+                    <span v-else class="type-badge custom">
+                      自定义词元
+                    </span>
+
+                    <div class="token-actions">
+                      <div class="weight-control" v-if="token.weight !== undefined">
+                        <label>权重:</label>
+                        <input
+                            type="number"
+                            v-model.number="token.weight"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            class="weight-input"
+                        />
+                      </div>
+
+                      <button
+                          v-if="!token.isReference"
+                          class="edit-btn"
+                          @click="startEditPoolToken(index)"
+                          title="编辑此词元"
+                      >
+                        编辑
+                      </button>
+
+                      <button
+                          v-else
+                          class="view-btn"
+                          @click="viewReferencedToken(token)"
+                          title="查看引用的词元"
+                      >
+                        👁️ 查看
+                      </button>
+
+                      <button
+                          class="delete-btn"
+                          @click="removePoolToken(index)"
+                          title="从池中移除"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
-                  <div class="token-source" v-if="token.mapping">
-                    <span class="source-badge system">⚙️ 映射词元</span>
-                    <button class="view-btn" @click="viewMappedToken(token)">查看</button>
+                  <!-- 多语言内容展示 -->
+                  <div class="token-languages">
+                    <div class="lang-item" v-if="getTokenLanguageValue(token, 'zh')">
+                      <span class="lang-label">中文:</span>
+                      <span class="lang-value zh">{{ getTokenLanguageValue(token, 'zh') }}</span>
+                    </div>
+                    <div class="lang-item" v-if="getTokenLanguageValue(token, 'en')">
+                      <span class="lang-label">英文:</span>
+                      <span class="lang-value en">{{ getTokenLanguageValue(token, 'en') }}</span>
+                    </div>
+                    <div class="lang-item" v-if="getTokenLanguageValue(token, 'jp')">
+                      <span class="lang-label">日文:</span>
+                      <span class="lang-value jp">{{ getTokenLanguageValue(token, 'jp') }}</span>
+                    </div>
                   </div>
-                  <div class="token-source" v-else>
-                    <span class="source-badge custom">👤 自定义词元</span>
+
+                  <!-- 引用信息 -->
+                  <div v-if="token.isReference" class="reference-info">
+                    <span class="ref-label">引用来源:</span>
+                    <span class="ref-path" v-if="token.referenceInfo">
+                      {{ token.referenceInfo.categoryName }} / {{ token.referenceInfo.subcategoryName }}
+                    </span>
+                    <span class="ref-error" v-else>
+                      ⚠️ 引用词元未找到
+                    </span>
+                    <!-- 显示引用词元的完整信息 -->
+                    <div v-if="token.referenceData" class="reference-details">
+                      <div class="ref-item">
+                        <span class="ref-label">ID:</span>
+                        <span class="ref-value">{{ token.referenceData.id }}</span>
+                      </div>
+                      <div class="ref-item" v-if="token.referenceData.zh">
+                        <span class="ref-label">中文:</span>
+                        <span class="ref-value zh">{{ token.referenceData.zh }}</span>
+                      </div>
+                      <div class="ref-item" v-if="token.referenceData.en">
+                        <span class="ref-label">英文:</span>
+                        <span class="ref-value en">{{ token.referenceData.en }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div class="token-controls">
-                  <div class="weight-control" v-if="token.weight !== undefined">
-                    <label>权重:</label>
-                    <input
-                        type="number"
-                        v-model.number="token.weight"
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        class="weight-input"
-                    />
+              <!-- 编辑状态：编辑模式（仅自定义词元） -->
+              <div v-else class="token-edit-form">
+                <div class="edit-header">
+                  <span class="token-index">#{{ index + 1 }}</span>
+                  <span class="edit-title">编辑自定义词元</span>
+                </div>
+
+                <div class="edit-body">
+                  <div class="edit-row">
+                    <div class="edit-group">
+                      <label>中文 (zh) *</label>
+                      <input
+                          type="text"
+                          v-model="editingPoolTokenData.zh"
+                          placeholder="中文内容"
+                          class="form-input"
+                      />
+                    </div>
+                    <div class="edit-group">
+                      <label>英文 (en) *</label>
+                      <input
+                          type="text"
+                          v-model="editingPoolTokenData.en"
+                          placeholder="英文内容"
+                          class="form-input"
+                      />
+                    </div>
                   </div>
 
-                  <button
-                      v-if="!token.mapping"
-                      class="edit-btn"
-                      @click="editCustomToken(token, index)"
-                  >
-                    编辑
-                  </button>
+                  <div class="edit-row">
+                    <div class="edit-group">
+                      <label>日文 (jp)</label>
+                      <input
+                          type="text"
+                          v-model="editingPoolTokenData.jp"
+                          placeholder="日文内容"
+                          class="form-input"
+                      />
+                    </div>
+                    <div class="edit-group">
+                      <label>权重</label>
+                      <input
+                          type="number"
+                          v-model.number="editingPoolTokenData.weight"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          class="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="edit-actions">
+                    <button class="btn-save" @click="saveEditPoolToken">
+                      ✅ 保存
+                    </button>
+                    <button class="btn-cancel" @click="cancelEditPoolToken">
+                      ❌ 取消
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -514,16 +637,16 @@ const formData = ref({
   tempSubcategoryId: ''
 });
 
-// 新增：临时分类存储
 const tempCategories = ref([]);
 const tempSubcategories = ref([]);
-
-// 新增：初始化标志
 const isInitializing = ref(false);
-
 const poolTokens = ref([]);
 const originalValue = ref('');
 const isSystemToken = ref(false);
+
+// 新增：词元池编辑状态
+const editingPoolTokenIndex = ref(null);
+const editingPoolTokenData = ref({});
 
 // 计算属性
 const tokenSource = computed(() => {
@@ -589,12 +712,150 @@ const getSubcategories = (categoryId) => {
   return [];
 };
 
-const viewMappedToken = (token) => {
-  emit('view-token', token.mapping);
+// 新增：获取词元的语言值（支持引用词元）
+const getTokenLanguageValue = (token, lang) => {
+  // 优先使用引用词元的完整数据
+  if (token.isReference && token.referenceData) {
+    const value = token.referenceData[lang];
+    if (value) {
+      return value;
+    }
+  }
+
+  // 其次使用词元自身的值
+  if (token[lang]) {
+    return token[lang];
+  }
+
+  // 最后尝试从映射数据中获取
+  if (token.mapping && token.mapping[lang]) {
+    return token.mapping[lang];
+  }
+
+  return '无数据';
 };
 
-const editCustomToken = (token, index) => {
-  emit('edit-token', token, index);
+// 新增：查找引用的词元数据
+// 修改：增强查找引用的词元数据
+const findReferencedToken = (tokenId) => {
+  if (!tokenId || !props.categories) return null;
+
+  console.log(`[findReferencedToken] 开始查找引用词元 ID: ${tokenId}`);
+
+  // 首先尝试通过ID直接匹配
+  for (const category of props.categories) {
+    for (const subcategory of category.subcategories) {
+      const found = subcategory.tokens.find(t => {
+        // 多种匹配方式
+        return t.id === tokenId ||
+            t.uniqueId === tokenId ||
+            t.en === tokenId ||
+            t.zh === tokenId;
+      });
+
+      if (found) {
+        console.log(`[findReferencedToken] 找到引用词元:`, {
+          id: found.id,
+          zh: found.zh,
+          en: found.en,
+          category: category.name,
+          subcategory: subcategory.name
+        });
+
+        return {
+          ...found,
+          categoryId: category.id,
+          subcategoryId: subcategory.id,
+          categoryName: category.name,
+          subcategoryName: subcategory.name
+        };
+      }
+    }
+  }
+
+  // 如果直接匹配失败，尝试通过词元值匹配
+  const lowerTokenId = tokenId.toLowerCase();
+  for (const category of props.categories) {
+    for (const subcategory of category.subcategories) {
+      const found = subcategory.tokens.find(t => {
+        const tokenEn = t.en?.toLowerCase() || '';
+        const tokenZh = t.zh?.toLowerCase() || '';
+        return tokenEn === lowerTokenId || tokenZh === lowerTokenId;
+      });
+
+      if (found) {
+        console.log(`[findReferencedToken] 通过值匹配找到引用词元:`, found);
+        return {
+          ...found,
+          categoryId: category.id,
+          subcategoryId: subcategory.id,
+          categoryName: category.name,
+          subcategoryName: subcategory.name
+        };
+      }
+    }
+  }
+
+  console.warn(`[findReferencedToken] 未找到引用词元 ID: ${tokenId}`);
+  return null;
+};
+
+// 新增：查看引用的词元
+const viewReferencedToken = (token) => {
+  if (!token.referenceData) {
+    console.warn('[TokenEditor] 引用词元数据缺失:', token);
+    return;
+  }
+
+  emit('view-token', token.referenceData);
+};
+
+// 新增：开始编辑词元池中的词元
+const startEditPoolToken = (index) => {
+  const token = poolTokens.value[index];
+  if (token.isReference) {
+    console.warn('[TokenEditor] 引用词元不支持直接编辑');
+    return;
+  }
+
+  editingPoolTokenIndex.value = index;
+  editingPoolTokenData.value = {
+    zh: token.zh || '',
+    en: token.en || '',
+    jp: token.jp || '',
+    weight: token.weight !== undefined ? token.weight : 1
+  };
+};
+
+// 新增:保存词元池词元编辑
+const saveEditPoolToken = () => {
+  if (!editingPoolTokenData.value.zh && !editingPoolTokenData.value.en) {
+    alert('至少需要填写中文或英文');
+    return;
+  }
+
+  poolTokens.value[editingPoolTokenIndex.value] = {
+    ...poolTokens.value[editingPoolTokenIndex.value],
+    zh: editingPoolTokenData.value.zh,
+    en: editingPoolTokenData.value.en,
+    jp: editingPoolTokenData.value.jp,
+    weight: editingPoolTokenData.value.weight
+  };
+
+  cancelEditPoolToken();
+};
+
+// 新增：取消词元池词元编辑
+const cancelEditPoolToken = () => {
+  editingPoolTokenIndex.value = null;
+  editingPoolTokenData.value = {};
+};
+
+// 新增：移除词元池中的词元
+const removePoolToken = (index) => {
+  if (confirm('确定要从词元池中移除此词元吗？')) {
+    poolTokens.value.splice(index, 1);
+  }
 };
 
 const confirmNewCategory = (type) => {
@@ -680,15 +941,13 @@ const cancelNewCategory = () => {
   formData.value.tempSubcategoryId = '';
 };
 
-// 修改：监听分类选择变化，但初始化时不清空子分类
 watch(() => formData.value.categoryId, (newVal, oldVal) => {
-  console.log('[TokenEditor] categoryId 变化:', { newVal, oldVal, isInitializing: isInitializing.value });
+  console.log('[TokenEditor] categoryId 变化:', {newVal, oldVal, isInitializing: isInitializing.value});
 
   if (newVal === '__new__' && oldVal && oldVal !== '__new__') {
     formData.value.tempCategoryId = oldVal;
   }
 
-  // 修改：只有在非初始化状态下才清空二级分类
   if (!isInitializing.value && newVal !== oldVal && newVal !== '__new__') {
     console.log('[TokenEditor] 清空二级分类选择');
     formData.value.subcategoryId = '';
@@ -726,11 +985,74 @@ const handleSave = () => {
   emit('save', saveData);
 };
 
-// 修改：初始化表单数据，添加初始化标志
+// 修改：增强词元池数据处理，确保引用词元信息完整
+const processPoolTokens = (tokens) => {
+  if (!tokens || !Array.isArray(tokens)) return [];
+
+  console.log(`[processPoolTokens] 开始处理词元池数据，数量: ${tokens.length}`);
+
+  return tokens.map((token, index) => {
+    console.log(`[processPoolTokens] 处理第 ${index + 1} 个词元:`, token);
+
+    // 判断是否为引用词元
+    const isReference = token.isReference ||
+        token.type === 'quote' ||
+        (token.mapping && !token.zh && !token.en);
+
+    if (isReference) {
+      // 引用词元：查找对应的完整词元信息
+      const referenceId = token.id || token.mapping || token.referenceId;
+      const referenceData = findReferencedToken(referenceId);
+
+      if (referenceData) {
+        console.log(`[processPoolTokens] 引用词元找到完整数据:`, referenceData);
+        return {
+          ...token,
+          isReference: true,
+          referenceData: referenceData,
+          referenceInfo: {
+            categoryName: getCategoryDisplayName(referenceData.categoryName),
+            subcategoryName: getCategoryDisplayName(referenceData.subcategoryName),
+            categoryId: referenceData.categoryId,
+            subcategoryId: referenceData.subcategoryId
+          },
+          // 确保多语言数据完整
+          zh: referenceData.zh || token.zh,
+          en: referenceData.en || token.en,
+          jp: referenceData.jp || token.jp
+        };
+      } else {
+        console.warn(`[processPoolTokens] 引用词元未找到对应数据:`, token);
+        return {
+          ...token,
+          isReference: true,
+          referenceData: null,
+          referenceInfo: null
+        };
+      }
+    } else {
+      // 自定义词元
+      console.log(`[processPoolTokens] 自定义词元:`, token);
+      return {
+        ...token,
+        isReference: false,
+        referenceData: null,
+        referenceInfo: null
+      };
+    }
+  });
+};
+
+// 新增：获取分类显示名称
+const getCategoryDisplayName = (nameObj) => {
+  if (!nameObj) return '未知';
+  if (typeof nameObj === 'string') return nameObj;
+  return props.language === 'zh' ? nameObj.zh : nameObj.en;
+};
+
 const initializeFormData = () => {
   if (!props.token) return;
 
-  // 设置初始化标志
   isInitializing.value = true;
 
   tempCategories.value = [];
@@ -742,7 +1064,6 @@ const initializeFormData = () => {
     const tokenData = props.token.mapping || props.token;
     isSystemToken.value = tokenData.source === 'system';
 
-    // 优先从 props.token 获取分类信息，其次从 tokenData
     const categoryId = props.token.categoryId || tokenData.categoryId || '';
     const subcategoryId = props.token.subcategoryId || tokenData.subcategoryId || '';
 
@@ -790,10 +1111,18 @@ const initializeFormData = () => {
       description: poolData.description || '',
       poolKey: poolData.key || poolData.id || ''
     };
-    poolTokens.value = poolData.tokens || poolData.parsedTokens || [];
+
+    // 处理词元池中的词元，识别引用关系
+    const rawTokens = poolData.tokens || poolData.parsedTokens || [];
+    poolTokens.value = processPoolTokens(rawTokens);
+
+    console.log('[TokenEditor] 词元池初始化:', {
+      rawCount: rawTokens.length,
+      processedCount: poolTokens.value.length,
+      referenceCount: poolTokens.value.filter(t => t.isReference).length
+    });
   }
 
-  // 延迟重置初始化标志，确保所有 watch 都执行完毕
   setTimeout(() => {
     isInitializing.value = false;
     console.log('[TokenEditor] 初始化完成');
@@ -820,6 +1149,20 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pool-form .form-section:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pool-form .form-section:last-child h4 {
+  flex-shrink: 0; /* 标题不收缩 */
 }
 
 .editor-footer-embedded {
@@ -962,8 +1305,18 @@ label {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 300px;
-  overflow-y: auto;
+  min-height: 60px;
+}
+
+.pool-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 允许弹性布局 */
+}
+
+.token-list {
+  flex: 1;
+  overflow: visible; /* 确保不产生内部滚动 */
 }
 
 .pool-token-item {
@@ -1166,6 +1519,281 @@ button:disabled {
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 词元池增强样式 */
+.pool-token-item {
+  padding: 12px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 6px;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+
+.pool-token-item:hover {
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+.pool-token-item.mapped-token {
+  border-left: 3px solid #667eea;
+}
+
+.pool-token-item.editing-token {
+  border-left: 3px solid #4CAF50;
+  background: #2a2a2a;
+}
+
+.token-content {
+  display: flex;
+  gap: 12px;
+}
+
+.token-index {
+  color: #888;
+  font-size: 12px;
+  min-width: 30px;
+  font-weight: 600;
+}
+
+.token-info-detailed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.token-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.type-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.type-badge.reference {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.type-badge.custom {
+  background: #4CAF50;
+  color: white;
+}
+
+.token-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.token-languages {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lang-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.lang-label {
+  color: #888;
+  min-width: 50px;
+  font-size: 11px;
+}
+
+.lang-value {
+  color: #e0e0e0;
+  flex: 1;
+  font-weight: 500;
+}
+
+.lang-value.zh {
+  color: #4CAF50;
+}
+
+.lang-value.en {
+  color: #2196F3;
+}
+
+.lang-value.jp {
+  color: #FF9800;
+}
+
+.reference-info {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.ref-label {
+  color: #888;
+}
+
+.ref-path {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.view-btn, .edit-btn, .delete-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 3px;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-btn {
+  background: #667eea;
+}
+
+.view-btn:hover {
+  background: #5568d3;
+}
+
+.edit-btn {
+  background: #4CAF50;
+}
+
+.edit-btn:hover {
+  background: #45a049;
+}
+
+.delete-btn {
+  background: #f44336;
+}
+
+.delete-btn:hover {
+  background: #da190b;
+}
+
+.weight-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weight-control label {
+  font-size: 11px;
+  color: #888;
+}
+
+.weight-input {
+  width: 60px;
+  padding: 3px 6px;
+  background: #1e1e1e;
+  border: 1px solid #404040;
+  border-radius: 3px;
+  color: #e0e0e0;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* 词元编辑表单 */
+.token-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #4CAF50;
+}
+
+.edit-title {
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-group label {
+  font-size: 11px;
+  color: #ddd;
+  font-weight: 500;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+}
+
+.btn-save, .btn-cancel {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-save:hover {
+  background: #45a049;
+}
+
+.btn-cancel {
+  background: #666;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #777;
+}
+
+@media (max-width: 768px) {
+  .edit-row {
+    grid-template-columns: 1fr;
+  }
+
+  .token-actions {
+    flex-wrap: wrap;
   }
 }
 </style>
