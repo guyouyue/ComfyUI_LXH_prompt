@@ -176,6 +176,7 @@
                 :class="{
                   'cursor-active': cursorIndex === index,
                   'no-mapping': !token.mapping,
+                  'custom-pool': token.isCustomPool,
                   'dragging': isDragging && dragInfo.sourceIndex === index && dragInfo.sourceArea === 'mapped',
                   'drop-target': dropTargetIndex === index && dropTargetArea === 'mapped',
                   'long-press-active': longPressActive && longPressToken.area === 'mapped' && longPressToken.index === index,
@@ -560,10 +561,11 @@ const getViewTokenDisplay = (token) => {
   // 处理词元池占位符
   if (token.isCustomPool && token.poolData) {
     return props.viewLanguage === 'zh'
-        ? (token.poolData.zh || token.poolData.key)
-        : (token.poolData.en || token.poolData.key);
+        ? (token.poolData.name?.zh || token.poolData.name?.en || token.poolData.id)
+        : (token.poolData.name?.en || token.poolData.name?.zh || token.poolData.id);
   }
 
+  // 原有逻辑保持不变...
   if (!token.mapping) {
     return token.original || token.value;
   }
@@ -582,9 +584,11 @@ const getViewTokenDisplay = (token) => {
 
 // 获取映射输出区域的词元显示 - 修复空值问题
 const getMappedTokenDisplay = (token) => {
-  // 处理词元池占位符 - 显示 {%key%}
-  if (token.isCustomPool) {
-    return token.value; // 返回 {%key%}
+  // 处理词元池占位符 - 显示友好名称（与原始输入区域一致）
+  if (token.isCustomPool && token.poolData) {
+    return props.language === 'zh'
+        ? (token.poolData.name?.zh || token.poolData.name?.en || token.poolData.id)
+        : (token.poolData.name?.en || token.poolData.name?.zh || token.poolData.id);
   }
 
   if (props.mode === 'natural') {
@@ -603,15 +607,34 @@ const getMappedTokenDisplay = (token) => {
   }
 };
 
+// 获取查看文本预览 - 词元池显示占位符格式
 const getViewTextPreview = () => {
   if (props.tokens.length === 0) return '空';
-  const parts = props.tokens.filter(t => !t.isEditing).map(token => getViewTokenDisplay(token));
+
+  const parts = props.tokens.filter(t => !t.isEditing).map(token => {
+    // 词元池使用占位符格式 {#%key#%}
+    if (token.isCustomPool) {
+      return token.value; // 返回 {#%key#%} 格式
+    }
+    // 其他词元使用正常的查看显示
+    return getViewTokenDisplay(token);
+  });
+
   return props.mode === 'token' ? parts.join(', ') : parts.join(' ');
 };
 
 const getFinalTextPreview = () => {
   if (props.tokens.length === 0) return '空';
-  const parts = props.tokens.filter(t => !t.isEditing).map(token => getMappedTokenDisplay(token));
+
+  const parts = props.tokens.filter(t => !t.isEditing).map(token => {
+    // 词元池使用占位符格式 {#%key#%}
+    if (token.isCustomPool) {
+      return token.value; // 返回 {#%key#%} 格式
+    }
+    // 其他词元使用正常的映射显示
+    return getMappedTokenDisplay(token);
+  });
+
   return props.mode === 'token' ? parts.join(', ') : parts.join(' ');
 };
 
@@ -622,9 +645,14 @@ const getOriginalTokenTitle = (token) => {
   if (token.isCustomPool) {
     parts.push('🎲 词元池占位符');
     parts.push(`Key: ${token.poolKey}`);
-    parts.push(`中文名: ${token.poolData?.zh || '无'}`);
-    parts.push(`英文名: ${token.poolData?.en || '无'}`);
-    parts.push(`候选词元: ${token.poolData?.parsedTokens?.length || 0} 个`);
+    if (token.poolData.name) {
+      parts.push(`中文名: ${token.poolData.name.zh || '无'}`);
+      parts.push(`英文名: ${token.poolData.name.en || '无'}`);
+    }
+    if (token.poolData.description) {
+      parts.push(`描述: ${token.poolData.description}`);
+    }
+    parts.push(`候选词元: ${token.poolData.tokens?.length || 0} 个`);
     parts.push('最终输出: ' + token.value);
   } else if (token.mapping) {
     parts.push('已映射');
@@ -650,11 +678,33 @@ const getOriginalTokenTitle = (token) => {
   }
 
   parts.push('双击编辑 | 长按1秒拖拽');
-  return parts.join(' | ');
+  return parts.join('\n');
 };
 
 const getMappedTokenTitle = (token) => {
   const parts = [];
+
+  // 添加：处理词元池占位符
+  if (token.isCustomPool && token.poolData) {
+    parts.push('🎲 词元池占位符');
+    parts.push(`Key: ${token.poolKey}`);
+
+    if (token.poolData.name) {
+      parts.push(`中文名: ${token.poolData.name.zh || '无'}`);
+      parts.push(`英文名: ${token.poolData.name.en || '无'}`);
+    }
+
+    if (token.poolData.description) {
+      parts.push(`描述: ${token.poolData.description}`);
+    }
+
+    parts.push(`候选词元: ${token.poolData.tokens?.length || 0} 个`);
+    parts.push('最终输出: ' + token.value);
+    parts.push('双击编辑 | 长按1秒拖拽');
+    return parts.join('\n');
+  }
+
+  // 原有逻辑
   if (token.mapping) {
     parts.push('原始值: ' + (token.original || token.value));
 
@@ -663,19 +713,25 @@ const getMappedTokenTitle = (token) => {
       parts.push(`输出语言: 中文`);
       parts.push(`英文: ${token.mapping.en}`);
       if (token.mapping.jp) parts.push(`日文: ${token.mapping.jp}`);
-    } else {
+    } else if (props.language === 'en') {
       parts.push(`输出语言: 英文`);
       parts.push(`中文: ${token.mapping.zh}`);
       if (token.mapping.jp) parts.push(`日文: ${token.mapping.jp}`);
+    } else if (props.language === 'jp') {
+      parts.push(`输出语言: 日文`);
+      parts.push(`中文: ${token.mapping.zh}`);
+      parts.push(`英文: ${token.mapping.en}`);
     }
   } else {
     parts.push('未映射，使用原始值');
   }
+
   if (token.isCustomGroup) {
     parts.push('(来自自定义组合)');
   }
+
   parts.push('双击编辑 | 长按1秒拖拽');
-  return parts.join(' | ');
+  return parts.join('\n');
 };
 
 watch(() => props.focused, (newVal) => {

@@ -10,50 +10,51 @@
       />
     </div>
     <div class="pool-content">
-      <!-- 自定义词元池分类 - 只在非搜索状态显示 -->
-      <div
-          v-show="!isSearching"
-          v-for="group in customGroups"
-          :key="group.id"
-          class="category custom-group-category"
-      >
+      <!-- 自定义词元池 - 作为一级分类 -->
+      <div v-if="hasCustomGroups && !isSearching" class="category custom-category">
         <div
             class="category-header"
-            @click="toggleCustomGroup(group.id)"
+            @click="toggleCustomPoolCategory"
         >
-          <span class="category-icon">{{ expandedCustomGroups.has(group.id) ? '▼' : '▶' }}</span>
-          <span class="category-title">{{ getGroupName(group) }}</span>
-          <span class="category-count">({{ group.parsedTokens?.length || 0 }})</span>
-          <span class="category-source user">🎲</span>
+          <span class="category-icon">{{ isCustomPoolExpanded ? '▼' : '▶' }}</span>
+          <span class="category-title">自定义词元池</span>
+          <span class="category-count">({{ totalCustomPoolCount }})</span>
+          <span class="category-source custom">🎲</span>
         </div>
 
-        <div v-show="expandedCustomGroups.has(group.id)" class="category-content">
-          <div class="token-list-container">
-            <div class="token-tags-grid">
-              <!-- 主词元池标签 -->
-              <div
-                  class="token-tag custom-pool-key"
-                  @dblclick="$emit('use-custom-group', group)"
-                  :title="getGroupKeyTooltip(group)"
-              >
-                <span class="token-text">{%{{ group.key }}%}</span>
-                <span class="token-source-badge user">🎲</span>
-              </div>
+        <div v-show="isCustomPoolExpanded" class="category-content">
+          <!-- 二级分组 (groups) -->
+          <div
+              v-for="group in customGroups"
+              :key="group.id"
+              class="subcategory custom-group"
+          >
+            <div
+                class="subcategory-header"
+                @click.stop="toggleCustomGroup(group.id)"
+            >
+              <span class="subcategory-icon">{{ expandedCustomGroups.has(group.id) ? '▼' : '▶' }}</span>
+              <span class="subcategory-title">{{ getGroupName(group) }}</span>
+              <span class="subcategory-count">({{ group.pool?.length || 0 }})</span>
+            </div>
 
-              <!-- 候选词元 -->
-              <div
-                  v-for="token in group.parsedTokens"
-                  :key="token.id"
-                  class="token-tag custom-group-member"
-                  @dblclick="$emit('use-custom-token', token)"
-                  :title="getCustomTokenTooltip(token)"
-              >
-                <span class="token-text">
-                  {{ language === 'zh' ? token.zh : token.en }}
-                </span>
-                <span class="token-weight">{{ token.weight }}</span>
-                <span v-if="token.isQuoted" class="token-type-badge">🔗</span>
-                <span v-else-if="token.isNew" class="token-type-badge">✨</span>
+            <!-- 三级池项目 (pool items) -->
+            <div v-show="expandedCustomGroups.has(group.id)" class="token-list-container">
+              <div class="pool-items-grid">
+                <div
+                    v-for="poolItem in group.pool"
+                    :key="poolItem.id"
+                    class="pool-item-tag"
+                    @dblclick="handlePoolItemDoubleClick(poolItem)"
+                    :title="getPoolItemTooltip(poolItem)"
+                >
+                  <span class="pool-item-icon">🎲</span>
+                  <span class="pool-item-text">
+                    {{ getPoolItemName(poolItem) }}
+                  </span>
+                  <span class="pool-item-key">{#%{{ poolItem.id }}#%}</span>
+                  <span class="pool-item-count">{{ poolItem.tokens?.length || 0 }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -85,7 +86,9 @@
                 class="subcategory-header"
                 @click.stop="toggleSubcategory(category.id, subcategory.id)"
             >
-              <span class="subcategory-icon">{{ expandedSubcategories.has(`${category.id}-${subcategory.id}`) ? '▼' : '▶' }}</span>
+              <span class="subcategory-icon">{{
+                  expandedSubcategories.has(`${category.id}-${subcategory.id}`) ? '▼' : '▶'
+                }}</span>
               <span class="subcategory-title">{{ getSubcategoryName(subcategory) }}</span>
               <span class="subcategory-count">({{ subcategory.tokens.length }})</span>
               <button
@@ -119,7 +122,7 @@
       </div>
 
       <!-- 空状态 -->
-      <div v-if="filteredCategories.length === 0 && customGroups.length === 0" class="empty-state">
+      <div v-if="!hasCustomGroups && filteredCategories.length === 0" class="empty-state">
         {{ isSearching ? '未找到匹配的词元，请尝试其他关键词' : '暂无词元' }}
       </div>
     </div>
@@ -136,37 +139,45 @@ const props = defineProps({
   focused: Boolean
 });
 
-const emit = defineEmits(['token-click', 'add-token', 'use-custom-group', 'use-custom-token']);
+const emit = defineEmits(['token-click', 'add-token', 'use-pool-item']);
 
 const searchQuery = ref('');
 
-// 使用 Set 来管理展开状态（更高效）
+// 使用 Set 来管理展开状态
 const expandedCategories = ref(new Set());
 const expandedSubcategories = ref(new Set());
 const expandedCustomGroups = ref(new Set());
+const isCustomPoolExpanded = ref(false);
+
+// 是否有自定义词元池
+const hasCustomGroups = computed(() => {
+  return props.customGroups && props.customGroups.length > 0;
+});
+
+// 计算自定义词元池的总数
+const totalCustomPoolCount = computed(() => {
+  if (!props.customGroups) return 0;
+  return props.customGroups.reduce((total, group) => {
+    return total + (group.pool?.length || 0);
+  }, 0);
+});
 
 // 是否正在搜索
 const isSearching = computed(() => {
   return searchQuery.value.trim().length > 0;
 });
 
-// 搜索结果计数
-const searchResultCount = computed(() => {
-  if (!isSearching.value) return 0;
-
-  let count = 0;
-  filteredCategories.value.forEach(cat => {
-    cat.subcategories.forEach(sub => {
-      count += sub.tokens.length;
-    });
-  });
-  return count;
-});
+// 在文档2的 script 部分添加
+const handlePoolItemDoubleClick = (poolItem) => {
+  console.log('[TokenPool] 双击词元池项目:', poolItem);
+  emit('use-pool-item', poolItem);
+};
 
 // 监听搜索状态变化
 watch(isSearching, (newValue) => {
   if (newValue) {
     // 开始搜索时，收起自定义词元池
+    isCustomPoolExpanded.value = false;
     expandedCustomGroups.value.clear();
     console.log('[TokenPool] 开始搜索，收起自定义词元池');
 
@@ -187,12 +198,33 @@ watch(isSearching, (newValue) => {
   }
 });
 
-// 清除搜索
-const clearSearch = () => {
-  searchQuery.value = '';
+// 切换自定义词元池一级分类 - 修改：实现手风琴效果
+const toggleCustomPoolCategory = () => {
+  const willExpand = !isCustomPoolExpanded.value;
+
+  // 收起所有系统词库分类
+  expandedCategories.value.clear();
+  expandedSubcategories.value.clear();
+
+  // 切换自定义词元池状态
+  isCustomPoolExpanded.value = willExpand;
+
+  if (willExpand) {
+    // 展开时，自动展开所有二级分组
+    if (props.customGroups) {
+      props.customGroups.forEach(group => {
+        expandedCustomGroups.value.add(group.id);
+      });
+    }
+  } else {
+    // 收起时，同时收起所有子分组
+    expandedCustomGroups.value.clear();
+  }
+
+  console.log('[TokenPool] 切换自定义词元池，状态:', willExpand ? '展开' : '收起');
 };
 
-// 自定义词元池的展开/收起
+// 切换自定义词元池的二级分组
 const toggleCustomGroup = (groupId) => {
   if (expandedCustomGroups.value.has(groupId)) {
     expandedCustomGroups.value.delete(groupId);
@@ -201,7 +233,7 @@ const toggleCustomGroup = (groupId) => {
   }
 };
 
-// 一级分类切换 - 手风琴模式
+// 一级分类切换 - 修改：实现手风琴模式并收起自定义词元池
 const toggleCategory = (categoryId) => {
   // 如果在搜索状态，不使用手风琴模式
   if (isSearching.value) {
@@ -230,7 +262,11 @@ const toggleCategory = (categoryId) => {
   // 非搜索状态使用手风琴模式
   const isCurrentlyExpanded = expandedCategories.value.has(categoryId);
 
-  // 收起所有分类和子分类
+  // 收起自定义词元池
+  isCustomPoolExpanded.value = false;
+  expandedCustomGroups.value.clear();
+
+  // 收起所有系统词库分类和子分类
   expandedCategories.value.clear();
   expandedSubcategories.value.clear();
 
@@ -246,9 +282,11 @@ const toggleCategory = (categoryId) => {
       });
     }
   }
+
+  console.log('[TokenPool] 切换系统词库分类:', categoryId, '状态:', !isCurrentlyExpanded ? '展开' : '收起');
 };
 
-// 二级分类切换 - 独立控制
+// 二级分类切换
 const toggleSubcategory = (categoryId, subcategoryId) => {
   const key = `${categoryId}-${subcategoryId}`;
   if (expandedSubcategories.value.has(key)) {
@@ -276,6 +314,40 @@ const filteredCategories = computed(() => {
     return {...cat, subcategories: filteredSubs};
   }).filter(cat => cat.subcategories.length > 0);
 });
+
+// 获取分组名称
+const getGroupName = (group) => {
+  if (group.name) {
+    return props.language === 'zh' ? group.name.zh : group.name.en;
+  }
+  return group.id;
+};
+
+// 获取池项目名称
+const getPoolItemName = (poolItem) => {
+  if (poolItem.name) {
+    return props.language === 'zh' ? poolItem.name.zh : poolItem.name.en;
+  }
+  return poolItem.description || poolItem.id;
+};
+
+// 获取池项目的 tooltip
+const getPoolItemTooltip = (poolItem) => {
+  const parts = [];
+  parts.push('🎲 词元池项目');
+  parts.push(`ID: ${poolItem.id}`);
+  parts.push(`Key: {#%${poolItem.id}#%}`);
+  if (poolItem.name) {
+    parts.push(`中文: ${poolItem.name.zh || '无'}`);
+    parts.push(`英文: ${poolItem.name.en || '无'}`);
+  }
+  if (poolItem.description) {
+    parts.push(`描述: ${poolItem.description}`);
+  }
+  parts.push(`候选词元: ${poolItem.tokens?.length || 0} 个`);
+  parts.push('双击使用此词元池');
+  return parts.join('\n');
+};
 
 const getCategoryName = (category) => {
   return props.language === 'zh' ? category.name.zh : category.name.en;
@@ -314,128 +386,103 @@ const getTokenTooltip = (token) => {
 
   return parts.join('\n');
 };
-
-// 获取组合名称
-const getGroupName = (group) => {
-  return props.language === 'zh' ? (group.zh || group.description || group.key) : (group.en || group.description || group.key);
-};
-
-// 获取组合 key 的 tooltip
-const getGroupKeyTooltip = (group) => {
-  const parts = [];
-  parts.push('🎲 词元池');
-  parts.push(`Key: {%${group.key}%}`);
-  parts.push(`中文: ${group.zh || '无'}`);
-  parts.push(`英文: ${group.en || '无'}`);
-  parts.push(`候选词元: ${group.parsedTokens?.length || 0} 个`);
-  parts.push(`总权重: ${getTotalWeight(group)}`);
-  parts.push('双击使用词元池（将插入 {%key%} 形式）');
-  return parts.join('\n');
-};
-
-// 获取自定义词元的 tooltip
-const getCustomTokenTooltip = (token) => {
-  const parts = [];
-
-  if (token.isQuoted) {
-    parts.push('🔗 引用词元');
-    parts.push(`来源ID: ${token.id}`);
-  } else if (token.isNew) {
-    parts.push('✨ 新建词元');
-  }
-
-  parts.push(`中文: ${token.zh || '无'}`);
-  parts.push(`英文: ${token.en || '无'}`);
-  parts.push(`权重: ${token.weight}`);
-  parts.push('双击直接使用此词元');
-
-  return parts.join('\n');
-};
-
-// 计算总权重
-const getTotalWeight = (group) => {
-  if (!group.parsedTokens) return '0.0';
-  return group.parsedTokens.reduce((sum, token) => sum + (token.weight || 1), 0).toFixed(1);
-};
 </script>
 
 <style scoped>
-/* 搜索信息栏样式 */
-.search-info {
+/* 自定义词元池样式 */
+.custom-category {
+  border-left: 3px solid #667eea;
+  background: rgba(102, 126, 234, 0.05);
+  margin-bottom: 8px;
+}
+
+.custom-category .category-header {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+}
+
+.category-source.custom {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.custom-group {
+  border-left: 2px solid #8b5cf6;
+  margin-left: 8px;
+}
+
+.custom-group .subcategory-header {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.custom-group .subcategory-header:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* 池项目网格 */
+.pool-items-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+/* 池项目标签 */
+.pool-item-tag {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #2a2a2a;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  border-left: 3px solid #0d7dd8;
-}
-
-.search-info-text {
-  color: #42A5F5;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.clear-search-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  background: #404040;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #e0e0e0;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-search-btn:hover {
-  background: #4a4a4a;
-  border-color: #666;
-  transform: translateY(-1px);
-}
-
-/* 保持原有样式不变 */
-.custom-group-tokens {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
-  padding: 8px;
-  background: #1e1e1e;
-  border-radius: 4px;
-  margin: 4px 0;
-}
-
-.custom-group-token {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  border: 1px solid #764ba2 !important;
-  color: white !important;
-  font-weight: 600;
-}
-
-.custom-group-token:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4) !important;
-}
-
-.custom-group-member {
-  background: #2a2a2a !important;
-  border-left: 3px solid #667eea !important;
-}
-
-.custom-group-member .token-weight {
-  background: #667eea;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: 1px solid #764ba2;
+  border-radius: 6px;
   color: white;
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 150px;
+  box-shadow: 0 2px 8px rgba(118, 75, 162, 0.3);
+}
+
+.pool-item-tag:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 16px rgba(118, 75, 162, 0.5);
+}
+
+.pool-item-icon {
+  font-size: 14px;
+}
+
+.pool-item-text {
+  flex: 1;
   font-weight: 600;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.category:first-child {
-  margin-top: 0;
+.pool-item-key {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 10px;
+  opacity: 0.9;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
+.pool-item-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 保留原有样式 */
 .token-pool {
   display: flex;
   flex-direction: column;
@@ -528,22 +575,6 @@ h4 {
   font-size: 11px;
 }
 
-.category-source {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.category-source.user {
-  background: #0d7dd8;
-  color: white;
-}
-
-.category-source.system {
-  background: #666;
-  color: white;
-}
-
 .category-content {
   padding-left: 16px;
   margin-top: 4px;
@@ -591,22 +622,6 @@ h4 {
 .subcategory-count {
   color: #777;
   font-size: 11px;
-}
-
-.subcategory-source {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.subcategory-source.user {
-  background: #0d7dd8;
-  color: white;
-}
-
-.subcategory-source.system {
-  background: #666;
-  color: white;
 }
 
 .add-token-btn {
@@ -720,14 +735,6 @@ h4 {
   color: white;
 }
 
-.empty-tokens {
-  text-align: center;
-  color: #666;
-  padding: 20px;
-  font-size: 12px;
-  font-style: italic;
-}
-
 .empty-state {
   text-align: center;
   color: #666;
@@ -762,52 +769,10 @@ h4 {
     padding: 3px 6px;
     max-width: 150px;
   }
-}
 
-/* 添加新样式 */
-.custom-group-category {
-  border-left: 3px solid #667eea;
-  background: rgba(102, 126, 234, 0.05);
-}
-
-.custom-pool-key {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  border: 2px solid #764ba2 !important;
-  color: white !important;
-  font-weight: 700 !important;
-  font-size: 13px !important;
-  padding: 6px 12px !important;
-  box-shadow: 0 2px 8px rgba(118, 75, 162, 0.3);
-}
-
-.custom-pool-key:hover {
-  transform: translateY(-2px) scale(1.02) !important;
-  box-shadow: 0 4px 16px rgba(118, 75, 162, 0.5) !important;
-}
-
-.custom-pool-key .token-text {
-  font-family: 'Consolas', 'Monaco', monospace;
-  letter-spacing: 0.5px;
-}
-
-.custom-group-member {
-  background: #2a2a2a !important;
-  border: 1px solid #667eea !important;
-  position: relative;
-}
-
-.custom-group-member .token-weight {
-  background: #667eea;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  margin-left: 4px;
-}
-
-.token-type-badge {
-  font-size: 10px;
-  margin-left: 2px;
+  .pool-item-tag {
+    min-width: 120px;
+    padding: 6px 10px;
+  }
 }
 </style>

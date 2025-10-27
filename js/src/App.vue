@@ -373,8 +373,8 @@ const handleUseCustomGroup = (group) => {
 
   const placeholderToken = {
     id: `custom_pool_${group.key}_${Date.now()}`,
-    value: `{%${group.key}%}`,
-    original: `{%${group.key}%}`,
+    value: `{#%${group.key}#%}`,
+    original: `{#%${group.key}#%}`,
     display: group.zh || group.en || group.key,
     mapping: null,
     isCustomPool: true,
@@ -508,6 +508,37 @@ const handleCancel = () => {
   console.log('[LXH Prompt Vue] 取消');
   emit('close', null);
 };
+
+const handleUsePoolItem = (poolItem) => {
+  const pos = cursorPosition.value.area === 'output' && cursorPosition.value.index != null
+      ? cursorPosition.value.index + 1
+      : finalTokens.value.length;
+
+  const placeholderToken = {
+    id: `custom_pool_${poolItem.id}_${Date.now()}`,
+    value: `{#%${poolItem.id}#%}`,
+    original: `{#%${poolItem.id}#%}`,
+    display: getPoolItemDisplayName(poolItem),
+    mapping: null,
+    isCustomPool: true,
+    poolKey: poolItem.id,
+    poolData: poolItem
+  };
+
+  finalTokens.value.splice(pos, 0, placeholderToken);
+  setCursor('output', pos);
+
+  console.log('[App] 插入词元池占位符:', placeholderToken);
+};
+
+// 获取池项目的显示名称（根据当前语言）
+const getPoolItemDisplayName = (poolItem) => {
+  if (poolItem.name) {
+    return viewLanguage.value === 'zh' ? poolItem.name.zh : poolItem.name.en;
+  }
+  return poolItem.description || poolItem.id;
+};
+
 </script>
 
 <template>
@@ -572,6 +603,7 @@ const handleCancel = () => {
                   @add-token="handleAddNewToken"
                   @use-custom-group="handleUseCustomGroup"
                   @use-custom-token="handleUseCustomToken"
+                  @use-pool-item="handleUsePoolItem"
                   @click="focusedArea = 'pool'"
               />
             </div>
