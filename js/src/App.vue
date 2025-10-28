@@ -279,9 +279,29 @@ const handleTokenClick = (token, index) => {
 
 // 修改：双击输出区词元时打开编辑器
 const handleTokenEdit = (token, index) => {
-  const tokenType = token.isCustomPool ? 'pool' :
-      token.mapping ? 'single' : 'unmapped';
-  openTokenEditor(token, tokenType);
+  if (token.isCustomPool) {
+    // ⭐ 从 customGroups 中查找完整的词元池数据
+    const fullPoolData = customGroups.value.find(group =>
+        group.id === token.poolData?.id ||
+        group.key === token.poolData?.key ||
+        group.id === token.poolKey ||
+        group.key === token.poolKey
+    );
+
+    if (fullPoolData) {
+      openTokenEditor({
+        ...fullPoolData,
+        poolId: fullPoolData.id,
+        poolKey: fullPoolData.key
+      }, 'pool');
+    } else {
+      console.error('[App] 未找到词元池数据:', token);
+      alert('⚠️ 未找到对应的词元池数据');
+    }
+  } else {
+    const tokenType = token.mapping ? 'single' : 'unmapped';
+    openTokenEditor(token, tokenType);
+  }
 };
 
 const handleRemoveToken = (index) => {
@@ -994,41 +1014,101 @@ const handleUnmappedTokenSave = async (saveData) => {
 };
 
 const handlePoolTokenSave = async (saveData) => {
-  console.log('[App] 保存词元池:', saveData);
+  console.log('[App] 保存词元池，saveData:', saveData);
 
   try {
-    const poolGroup = customGroups.value.find(group =>
-        group.key === saveData.poolKey || group.id === saveData.poolKey
-    );
+    // ⭐ 第一步：查找 group
+    const targetGroup = customGroups.value.find(group => {
+      return group.id === saveData.groupId ||
+             group.id === saveData.groupKey;
+    });
 
-    if (!poolGroup) {
-      throw new Error('未找到要更新的词元池');
+    if (!targetGroup) {
+      console.error('[App] 未找到目标分组:', {
+        saveData,
+        availableGroups: customGroups.value.map(g => ({
+          id: g.id,
+          name: g.name
+        }))
+      });
+      throw new Error(`未找到目标分组（Group ID: ${saveData.groupId}）`);
     }
 
+    console.log('[App] 找到目标分组:', {
+      id: targetGroup.id,
+      name: targetGroup.name
+    });
+
+    // ⭐ 第二步：在 group 中查找 pool item
+    if (!targetGroup.pool) {
+      targetGroup.pool = [];
+    }
+
+    const poolItemIndex = targetGroup.pool.findIndex(item => {
+      return item.id === saveData.poolId ||
+             item.id === saveData.id;
+    });
+
+    if (poolItemIndex === -1) {
+      console.error('[App] 在分组中未找到词元池项目:', {
+        groupId: targetGroup.id,
+        poolId: saveData.poolId,
+        availablePoolItems: targetGroup.pool.map(p => ({
+          id: p.id,
+          name: p.name
+        }))
+      });
+      throw new Error(`在分组中未找到词元池项目（Pool ID: ${saveData.poolId}）`);
+    }
+
+    console.log('[App] 找到词元池项目，索引:', poolItemIndex);
+
+    // ⭐ 第三步：更新 pool item 数据
     const updateData = {
       name: saveData.name,
       description: saveData.description,
-      tokens: saveData.poolTokens || []
+      tokens: (saveData.poolTokens || []).map(token => {
+        // 保存时去除运行时添加的属性
+        const cleanToken = {
+          type: token.type || (token.isReference ? 'quote' : 'new'),
+          id: token.id,
+          weight: token.weight || 1
+        };
+
+        // 如果是新建词元，保存多语言数据
+        if (cleanToken.type === 'new') {
+          cleanToken.zh = token.zh;
+          cleanToken.en = token.en;
+          if (token.jp) cleanToken.jp = token.jp;
+        }
+
+        return cleanToken;
+      })
     };
 
-    const success = updateCustomGroup(poolGroup.id, updateData);
+    // 更新 pool item
+    targetGroup.pool[poolItemIndex] = {
+      ...targetGroup.pool[poolItemIndex],
+      ...updateData
+    };
 
-    if (success) {
-      saveCustomGroups();
-      console.log('[App] 词元池已更新:', updateData);
+    console.log('[App] 词元池项目已更新:', targetGroup.pool[poolItemIndex]);
 
-      // ⭐ 同步输出区中使用了此词元池的占位符
-      syncPoolTokensInOutput(poolGroup.key, updateData);
+    // ⭐ 第四步：保存整个 customGroups
+    await saveCustomGroups();
 
-      alert('✅ 词元池已更新');
-      return true; // ⭐ 返回成功
-    } else {
-      throw new Error('更新词元池失败');
-    }
+    // ⭐ 第五步：同步输出区
+    syncPoolTokensInOutput(saveData.poolId, {
+      ...updateData,
+      id: saveData.poolId
+    });
+
+    alert('✅ 词元池已更新');
+    return true;
   } catch (error) {
     console.error('[App] 保存词元池失败:', error);
     alert('❌ 保存失败: ' + error.message);
-    return false; // ⭐ 返回失败
+    return false;
   }
 };
 
@@ -1138,8 +1218,41 @@ const handleEditPoolToken = (token, index) => {
 
 // 点击词元池项目打开编辑器
 const handlePoolItemClick = (poolItem) => {
-  console.log('[App] 词元池项目被点击，打开编辑器:', poolItem);
-  openTokenEditor(poolItem, 'pool');
+  console.log('[App] 词元池项目被点击，查找分组信息:', poolItem);
+
+  // ⭐ 查找包含此 poolItem 的 group
+  let parentGroup = null;
+  for (const group of customGroups.value) {
+    if (group.pool && group.pool.some(item => item.id === poolItem.id)) {
+      parentGroup = group;
+      break;
+    }
+  }
+
+  if (!parentGroup) {
+    console.error('[App] 未找到词元池所属的分组:', poolItem);
+    alert('⚠️ 未找到词元池所属的分组');
+    return;
+  }
+
+  console.log('[App] 找到父级分组:', {
+    groupId: parentGroup.id,
+    groupName: parentGroup.name,
+    poolId: poolItem.id
+  });
+
+  // ⭐ 传递完整数据（包含 groupId）
+  const fullPoolData = {
+    ...poolItem,
+    poolId: poolItem.id,
+    poolKey: poolItem.id, // pool item 没有单独的 key
+    groupId: parentGroup.id,      // ⭐ 新增
+    groupKey: parentGroup.id,     // ⭐ 新增
+    groupName: parentGroup.name,  // ⭐ 新增
+    poolData: poolItem  // 完整的 pool item 数据
+  };
+
+  openTokenEditor(fullPoolData, 'pool');
 };
 
 // 双击词元池项目插入到输出区

@@ -1,5 +1,5 @@
 import {ref} from 'vue';
-import {getUserDataPath} from '../utils/pathHelper.js';
+import {getUserDataPath, getSaveUserDataPath} from '../utils/pathHelper.js';
 
 export function useCustomGroups() {
     const customGroups = ref([]);
@@ -243,50 +243,27 @@ export function useCustomGroups() {
             const env = import.meta.env.DEV ? '🔧 开发环境' : '📦 生产环境';
             console.group(`💾 [useCustomGroups] 保存词组数据 (${env})`);
 
-            // 1. 读取现有数据
-            let existingData = {groups: []};
-            try {
-                const groupPath = getUserDataPath('group.json');
-                const response = await fetch(groupPath);
-                if (response.ok) {
-                    existingData = await response.json();
-                    console.log('📖 读取现有词组，数量:', existingData.groups?.length || 0);
-                }
-            } catch (error) {
-                console.warn('⚠️ 读取现有词组失败，使用空数据:', error);
-            }
-
-            // 2. 合并数据
-            const groupMap = new Map();
-
-            // 添加现有词组
-            (existingData.groups || []).forEach(group => {
-                groupMap.set(group.id, group);
-            });
-
-            // 更新/添加当前词组
-            customGroups.value.forEach(group => {
-                groupMap.set(group.id, {
-                    ...groupMap.get(group.id),
-                    ...group,
-                    updatedAt: Date.now()
-                });
-            });
-
-            const mergedGroups = Array.from(groupMap.values());
+            // ⭐ 清理数据：移除运行时属性
+            const cleanGroups = customGroups.value.map(group => ({
+                id: group.id,
+                name: group.name,
+                pool: (group.pool || []).map(poolItem => ({
+                    id: poolItem.id,
+                    name: poolItem.name,
+                    description: poolItem.description,
+                    tokens: poolItem.tokens
+                }))
+            }));
 
             const dataToSave = {
-                groups: mergedGroups,
+                version: '1.0.0',
+                groups: cleanGroups,
                 updatedAt: Date.now()
             };
 
-            console.log('📊 合并结果:', {
-                existing: existingData.groups?.length || 0,
-                current: customGroups.value.length,
-                merged: mergedGroups.length
-            });
+            console.log('词组数量:', cleanGroups.length);
+            console.log('保存数据预览:', JSON.stringify(dataToSave, null, 2).substring(0, 500));
 
-            // 3. 保存
             const savePath = getSaveUserDataPath();
             console.log('保存路径:', savePath);
 
