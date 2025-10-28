@@ -295,10 +295,15 @@ export function useTokens() {
             // 查找或创建分类
             let userCategory = userData.categories.find(cat => cat.id === category.id);
             if (!userCategory) {
+                // ✅ 只复制必要的属性
                 userCategory = {
-                    ...category,
+                    id: category.id,
+                    name: category.name,
+                    description: category.description,
                     source: 'user',
-                    subcategories: []
+                    subcategories: [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 };
                 userData.categories.push(userCategory);
             }
@@ -306,16 +311,25 @@ export function useTokens() {
             // 查找或创建子分类
             let userSubcategory = userCategory.subcategories.find(sub => sub.id === subcategory.id);
             if (!userSubcategory) {
+                // ✅ 只复制必要的属性
                 userSubcategory = {
-                    ...subcategory,
+                    id: subcategory.id,
+                    name: subcategory.name,
+                    description: subcategory.description,
                     source: 'user',
-                    tokens: []
+                    tokens: [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 };
                 userCategory.subcategories.push(userSubcategory);
             }
 
             // 添加词元
-            userSubcategory.tokens.push(token);
+            userSubcategory.tokens.push({
+                ...token,
+                categoryId: category.id,
+                subcategoryId: subcategory.id
+            });
 
             // 保存到用户词库文件
             await saveUserTokens(userData);
@@ -347,7 +361,18 @@ export function useTokens() {
             }
 
             // 2. 准备要保存的数据
-            const newCategories = userData?.categories || userTokens.value;
+            // ⭐ 关键修改：无论是否传入 userData，都要清洗数据
+            let newCategories;
+            if (userData?.categories) {
+                console.log('📝 使用传入的 userData，分类数:', userData.categories.length);
+                // ⭐ 清洗传入的数据
+                newCategories = cleanUserTokens(userData.categories);
+                console.log('🧹 清洗后的分类数:', newCategories.length);
+            } else {
+                // ⭐ 清洗 userTokens.value
+                newCategories = cleanUserTokens(userTokens.value);
+                console.log('🧹 使用清洗后的 userTokens，分类数:', newCategories.length);
+            }
 
             // 3. 合并数据（保留现有数据，更新/添加新数据）
             const mergedCategories = mergeCategories(existingData.categories || [], newCategories);
@@ -385,11 +410,12 @@ export function useTokens() {
                 console.log('✅ 保存成功:', result);
                 console.groupEnd();
 
-                // ⭐ 关键修改：同步更新本地状态
-                userTokens.value = mergedCategories;
+                // ⭐ 关键修改：只更新 userTokens.value 为纯净的用户数据
+                // 不要包含合并后的系统数据
+                userTokens.value = processUserTokens(mergedCategories);
 
                 // ⭐ 立即重新合并到 tokenCategories
-                await mergeTokenData(systemTokens.value, mergedCategories);
+                await mergeTokenData(systemTokens.value, userTokens.value);
 
                 console.log('✅ 内存数据已同步更新');
 
@@ -405,6 +431,75 @@ export function useTokens() {
             console.groupEnd();
             return false;
         }
+    };
+
+    // ⭐ 新增：清洗用户词元数据（移除不应该保存的数据）
+    const cleanUserTokens = (categories) => {
+        console.log('[cleanUserTokens] 开始清洗用户词元数据');
+
+        if (!categories || categories.length === 0) {
+            return [];
+        }
+
+        // 只保留标记为 'user' source 的数据
+        const cleanedCategories = categories
+            .filter(cat => {
+                // 只保留用户分类或包含用户词元的分类
+                const hasUserTokens = cat.subcategories?.some(sub =>
+                    sub.tokens?.some(token => token.source === 'user')
+                );
+                return cat.source === 'user' || hasUserTokens;
+            })
+            .map(category => {
+                // 清洗子分类
+                const cleanedSubcategories = category.subcategories
+                    .filter(sub => {
+                        // 只保留包含用户词元的子分类
+                        return sub.tokens?.some(token => token.source === 'user');
+                    })
+                    .map(subcategory => {
+                        // 只保留用户词元
+                        const userOnlyTokens = subcategory.tokens.filter(token =>
+                            token.source === 'user'
+                        );
+
+                        return {
+                            id: subcategory.id,
+                            name: subcategory.name,
+                            description: subcategory.description,
+                            source: 'user',
+                            tokens: userOnlyTokens,
+                            createdAt: subcategory.createdAt,
+                            updatedAt: subcategory.updatedAt || Date.now()
+                        };
+                    })
+                    .filter(sub => sub.tokens.length > 0); // 移除空子分类
+
+                // 如果没有用户词元，返回 null
+                if (cleanedSubcategories.length === 0) {
+                    return null;
+                }
+
+                return {
+                    id: category.id,
+                    name: category.name,
+                    description: category.description,
+                    source: 'user',
+                    subcategories: cleanedSubcategories,
+                    createdAt: category.createdAt,
+                    updatedAt: category.updatedAt || Date.now()
+                };
+            })
+            .filter(cat => cat !== null); // 移除空分类
+
+        console.log('[cleanUserTokens] 清洗完成:', {
+            original: categories.length,
+            cleaned: cleanedCategories.length,
+            tokens: cleanedCategories.reduce((sum, cat) =>
+                sum + cat.subcategories.reduce((s, sub) => s + sub.tokens.length, 0), 0)
+        });
+
+        return cleanedCategories;
     };
 
     const refreshMergedData = async () => {
@@ -569,6 +664,8 @@ export function useTokens() {
 
     const updateUserToken = async (tokenId, updates) => {
         try {
+            console.log('[updateUserToken] 开始更新词元:', {tokenId, updates});
+
             // 查找词元
             for (const category of userTokens.value) {
                 for (const subcategory of category.subcategories) {
@@ -581,11 +678,19 @@ export function useTokens() {
                             updatedAt: Date.now()
                         };
 
-                        await saveUserTokens();
+                        console.log('[updateUserToken] 词元已更新:', subcategory.tokens[tokenIndex]);
+
+                        // ⭐ 关键修改：只保存用户词库数据
+                        await saveUserTokens({
+                            categories: userTokens.value
+                        });
+
                         return true;
                     }
                 }
             }
+
+            console.warn('[updateUserToken] 未找到要更新的词元:', tokenId);
             return false;
         } catch (error) {
             console.error('[useTokens] 更新用户词元失败:', error);
@@ -596,47 +701,78 @@ export function useTokens() {
     // 添加用户词元到指定分类
     const addUserToken = async (tokenData, category, subcategory) => {
         try {
+            console.log('[addUserToken] 开始添加词元:', {
+                tokenId: tokenData.id,
+                categoryId: category.id,
+                subcategoryId: subcategory.id
+            });
+
             // 查找或创建用户分类
             let userCategory = userTokens.value.find(cat => cat.id === category.id);
             if (!userCategory) {
                 userCategory = {
-                    ...category,
+                    id: category.id,
+                    name: category.name,
+                    description: category.description,
                     source: 'user',
-                    subcategories: []
+                    subcategories: [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 };
                 userTokens.value.push(userCategory);
+                console.log('[addUserToken] 创建新的用户分类:', userCategory.id);
             }
 
             // 查找或创建用户子分类
             let userSubcategory = userCategory.subcategories.find(sub => sub.id === subcategory.id);
             if (!userSubcategory) {
                 userSubcategory = {
-                    ...subcategory,
+                    id: subcategory.id,
+                    name: subcategory.name,
+                    description: subcategory.description,
                     source: 'user',
-                    tokens: []
+                    tokens: [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 };
                 userCategory.subcategories.push(userSubcategory);
+                console.log('[addUserToken] 创建新的用户子分类:', userSubcategory.id);
             }
 
             // 检查是否已存在相同ID的词元
             const existingIndex = userSubcategory.tokens.findIndex(token => token.id === tokenData.id);
             if (existingIndex !== -1) {
-                // 更新现有词元
+                console.log('[addUserToken] 更新现有词元:', tokenData.id);
                 userSubcategory.tokens[existingIndex] = {
                     ...userSubcategory.tokens[existingIndex],
                     ...tokenData,
+                    source: 'user', // ⭐ 确保标记为用户词元
                     updatedAt: Date.now()
                 };
             } else {
-                // 添加新词元
+                console.log('[addUserToken] 添加新词元:', tokenData.id);
                 userSubcategory.tokens.push({
                     ...tokenData,
+                    categoryId: category.id,
+                    subcategoryId: subcategory.id,
+                    source: 'user', // ⭐ 确保标记为用户词元
                     createdAt: Date.now(),
                     updatedAt: Date.now()
                 });
             }
 
-            await saveUserTokens();
+            // ⭐ 关键修改：传入清洗后的数据
+            await saveUserTokens({
+                categories: userTokens.value
+            });
+
+            console.log('[addUserToken] 词元添加成功，当前用户词库状态:', {
+                categories: userTokens.value.length,
+                subcategories: userTokens.value.reduce((sum, cat) => sum + cat.subcategories.length, 0),
+                tokens: userTokens.value.reduce((sum, cat) =>
+                    sum + cat.subcategories.reduce((s, sub) => s + sub.tokens.length, 0), 0)
+            });
+
             return true;
         } catch (error) {
             console.error('[useTokens] 添加用户词元失败:', error);

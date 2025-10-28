@@ -52,7 +52,8 @@ const {
   removeTokenFromGroup,
   selectRandomToken,
   reloadGroups,
-  setTokensMap
+  setTokensMap,
+  saveCustomGroups
 } = useCustomGroups();
 
 const {cursorPosition, setCursor} = useCursor();
@@ -257,6 +258,11 @@ const handleOutputLanguageChange = (lang) => {
   finalTokens.value.forEach(token => {
     if (token.mapping) {
       token.display = lang === LANGUAGES.ZH ? token.mapping.zh : token.mapping.en;
+    } else if (token.isCustomPool && token.poolData) {
+      // ⭐ 同时更新词元池的显示
+      token.display = lang === LANGUAGES.ZH
+          ? token.poolData.name?.zh
+          : token.poolData.name?.en;
     }
   });
 };
@@ -325,14 +331,21 @@ const findTokenMappingByValue = (value) => {
   return null;
 };
 
-const handleAddNewToken = (category, subcategory) => {
+const handleAddNewToken = async (category, subcategory) => {
   const zh = prompt('中文:');
   if (!zh) return;
 
   const en = prompt('英文:');
   if (!en) return;
 
-  addNewToken(category, subcategory, {zh, en});
+  // ⭐ 调用并等待结果
+  const newToken = await addNewToken(category, subcategory, {zh, en});
+
+  if (newToken) {
+    // ⭐ 同步输出区词元
+    syncOutputTokens(newToken);
+    console.log('[App] 新词元已添加并同步到输出区');
+  }
 };
 
 const handleUseCustomGroup = (group) => {
@@ -415,25 +428,115 @@ const openNewTokenEditor = () => {
   showEditor.value = true;
 };
 
-// 处理词元保存
 // 在 handleTokenSave 方法中添加对新分类的处理
-const handleTokenSave = (saveData) => {
+const handleTokenSave = async (saveData) => {
   console.log('[App] 保存词元数据:', saveData);
 
-  // 处理新分类创建
-  if (saveData.newCategory) {
-    handleNewCategoryCreation(saveData.newCategory);
-  }
+  try {
+    // 处理新分类创建
+    if (saveData.newCategory) {
+      handleNewCategoryCreation(saveData.newCategory);
+    }
 
-  if (saveData.tokenType === 'single') {
-    handleSingleTokenSave(saveData);
-  } else if (saveData.tokenType === 'unmapped') {
-    handleUnmappedTokenSave(saveData);
-  } else if (saveData.tokenType === 'pool') {
-    handlePoolTokenSave(saveData);
-  }
+    let success = false;
+    if (saveData.tokenType === 'single') {
+      success = await handleSingleTokenSave(saveData);
+    } else if (saveData.tokenType === 'unmapped') {
+      success = await handleUnmappedTokenSave(saveData);
+    } else if (saveData.tokenType === 'pool') {
+      success = await handlePoolTokenSave(saveData);
+    }
 
-  showEditor.value = false;
+    if (success) {
+      console.log('[App] 保存成功，保持编辑界面打开');
+
+      // ⭐ 关键修改：从最新的 tokenCategories 中刷新编辑器数据
+      if (saveData.tokenType === 'single' && editingToken.value) {
+        refreshEditingToken(saveData.id, saveData.categoryId, saveData.subcategoryId);
+      } else if (saveData.tokenType === 'unmapped' && saveData.id) {
+        // 未映射词元保存后也需要刷新
+        refreshEditingToken(saveData.id, saveData.categoryId, saveData.subcategoryId);
+      } else if (saveData.tokenType === 'pool' && saveData.poolKey) {
+        // 词元池保存后刷新
+        refreshEditingPoolToken(saveData.poolKey);
+      }
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[App] 保存失败:', error);
+    return false;
+  }
+};
+
+
+// ⭐ 新增：从最新的词库中刷新编辑器中的词元数据
+const refreshEditingToken = (tokenId, categoryId, subcategoryId) => {
+  console.log('[App] 刷新编辑器词元数据:', {tokenId, categoryId, subcategoryId});
+
+  try {
+    // 从最新的 tokenCategories 中查找词元
+    const category = tokenCategories.value.find(cat => cat.id === categoryId);
+    if (!category) {
+      console.warn('[App] 未找到分类:', categoryId);
+      return;
+    }
+
+    const subcategory = category.subcategories.find(sub => sub.id === subcategoryId);
+    if (!subcategory) {
+      console.warn('[App] 未找到子分类:', subcategoryId);
+      return;
+    }
+
+    const updatedToken = subcategory.tokens.find(t => t.id === tokenId);
+    if (!updatedToken) {
+      console.warn('[App] 未找到词元:', tokenId);
+      return;
+    }
+
+    // ⭐ 更新编辑器中的词元数据（包含完整的分类信息）
+    editingToken.value = {
+      ...updatedToken,
+      categoryId: category.id,
+      subcategoryId: subcategory.id,
+      categoryName: category.name,
+      subcategoryName: subcategory.name
+    };
+
+    console.log('[App] 编辑器词元数据已刷新:', editingToken.value);
+  } catch (error) {
+    console.error('[App] 刷新编辑器词元数据失败:', error);
+  }
+};
+
+// ⭐ 新增：刷新词元池编辑器数据
+const refreshEditingPoolToken = (poolKey) => {
+  console.log('[App] 刷新词元池编辑器数据:', poolKey);
+
+  try {
+    const updatedPool = customGroups.value.find(group =>
+      group.key === poolKey || group.id === poolKey
+    );
+
+    if (!updatedPool) {
+      console.warn('[App] 未找到词元池:', poolKey);
+      return;
+    }
+
+    // 更新编辑器中的词元池数据
+    editingToken.value = {
+      ...editingToken.value,
+      poolData: updatedPool,
+      name: updatedPool.name,
+      description: updatedPool.description
+    };
+
+    console.log('[App] 词元池编辑器数据已刷新:', editingToken.value);
+  } catch (error) {
+    console.error('[App] 刷新词元池编辑器数据失败:', error);
+  }
 };
 
 // 新增方法：处理新分类创建
@@ -500,6 +603,53 @@ const createTempCategories = async (tempCategories, tempSubcategories) => {
     console.error('[App] 创建临时分类失败:', error);
     return false;
   }
+};
+
+// 新增：同步更新输出区词元数据
+const syncOutputTokens = (updatedTokenData) => {
+  console.log('[App] 开始同步输出区词元数据:', updatedTokenData);
+
+  finalTokens.value.forEach((token, index) => {
+    // 检查是否是同一个词元（通过ID匹配）
+    if (token.mapping && token.mapping.id === updatedTokenData.id) {
+      console.log(`[App] 更新输出区词元 ${index}:`, token.mapping.id);
+
+      // 更新映射数据
+      token.mapping = {
+        ...token.mapping,
+        zh: updatedTokenData.zh,
+        en: updatedTokenData.en,
+        jp: updatedTokenData.jp,
+        description: updatedTokenData.description
+      };
+
+      // 更新显示文本
+      token.display = outputLanguage.value === LANGUAGES.ZH
+          ? updatedTokenData.zh
+          : updatedTokenData.en;
+    }
+
+    // 检查未映射词元（通过原始值匹配）
+    if (!token.mapping && token.original === updatedTokenData.originalValue) {
+      console.log(`[App] 更新未映射词元 ${index}:`, token.original);
+
+      // 如果是未映射词元变成了已映射词元
+      if (updatedTokenData.zh || updatedTokenData.en) {
+        token.mapping = {
+          id: updatedTokenData.id,
+          zh: updatedTokenData.zh,
+          en: updatedTokenData.en,
+          jp: updatedTokenData.jp,
+          description: updatedTokenData.description
+        };
+        token.display = outputLanguage.value === LANGUAGES.ZH
+            ? updatedTokenData.zh
+            : updatedTokenData.en;
+      }
+    }
+  });
+
+  console.log('[App] 输出区词元同步完成');
 };
 
 // 新增方法：自动创建缺失的分类
@@ -643,7 +793,6 @@ const autoCreateMissingCategory = async (categoryId, subcategoryId, saveData) =>
 
 const handleSingleTokenSave = async (saveData) => {
   console.log('[App] 保存单个词元:', saveData);
-
   try {
     // 先创建临时分类（如果有）
     if (saveData.tempCategories && saveData.tempCategories.length > 0) {
@@ -702,6 +851,10 @@ const handleSingleTokenSave = async (saveData) => {
       }
 
       console.log('[App] 系统词元已保存为用户副本:', newTokenData);
+
+      // ⭐ 同步输出区词元
+      syncOutputTokens(newTokenData);
+
     } else {
       const updateData = {
         zh: saveData.zh,
@@ -743,6 +896,12 @@ const handleSingleTokenSave = async (saveData) => {
             throw new Error('更新词元失败');
           }
         }
+
+        // ⭐ 同步输出区词元
+        syncOutputTokens({
+          id: saveData.id,
+          ...updateData
+        });
       } else {
         throw new Error('未找到要更新的词元');
       }
@@ -750,10 +909,11 @@ const handleSingleTokenSave = async (saveData) => {
 
     const envMsg = import.meta.env.DEV ? '（开发环境 - 已保存到内存）' : '（生产环境 - 已保存到服务器）';
     alert(`✅ 词元已保存到用户词库 ${envMsg}`);
-
+    return true; // ⭐ 返回 true 表示成功
   } catch (error) {
     console.error('[App] 保存单个词元失败:', error);
     alert('❌ 保存失败: ' + error.message);
+    return false; // ⭐ 返回 false 表示失败
   }
 };
 
@@ -816,22 +976,27 @@ const handleUnmappedTokenSave = async (saveData) => {
     await addUserToken(newTokenData, targetCategory, targetSubcategory);
     console.log('[App] 未映射词元已保存:', newTokenData);
 
+    // ⭐ 同步输出区词元（未映射词元变成已映射）
+    syncOutputTokens(newTokenData);
+
     const success = await saveUserTokenData();
     if (success) {
       alert('✅ 未映射词元已保存到用户词库');
+      return true; // ⭐ 返回成功
     } else {
       throw new Error('保存到文件失败');
     }
   } catch (error) {
     console.error('[App] 保存未映射词元失败:', error);
     alert('❌ 保存失败: ' + error.message);
+    return false; // ⭐ 返回失败
   }
 };
-const handlePoolTokenSave = (saveData) => {
+
+const handlePoolTokenSave = async (saveData) => {
   console.log('[App] 保存词元池:', saveData);
 
   try {
-
     const poolGroup = customGroups.value.find(group =>
         group.key === saveData.poolKey || group.id === saveData.poolKey
     );
@@ -846,21 +1011,52 @@ const handlePoolTokenSave = (saveData) => {
       tokens: saveData.poolTokens || []
     };
 
-    // ⭐ 直接使用顶层的 updateCustomGroup
     const success = updateCustomGroup(poolGroup.id, updateData);
 
     if (success) {
-      // ⭐ 直接使用顶层的 saveCustomGroups（注意：这可能需要改成 async/await）
       saveCustomGroups();
       console.log('[App] 词元池已更新:', updateData);
+
+      // ⭐ 同步输出区中使用了此词元池的占位符
+      syncPoolTokensInOutput(poolGroup.key, updateData);
+
       alert('✅ 词元池已更新');
+      return true; // ⭐ 返回成功
     } else {
       throw new Error('更新词元池失败');
     }
   } catch (error) {
     console.error('[App] 保存词元池失败:', error);
     alert('❌ 保存失败: ' + error.message);
+    return false; // ⭐ 返回失败
   }
+};
+
+// 新增：同步输出区中的词元池数据
+const syncPoolTokensInOutput = (poolKey, updatedPoolData) => {
+  console.log('[App] 开始同步输出区词元池数据:', poolKey);
+
+  finalTokens.value.forEach((token, index) => {
+    // 检查是否是词元池占位符
+    if (token.isCustomPool && token.poolKey === poolKey) {
+      console.log(`[App] 更新输出区词元池 ${index}:`, poolKey);
+
+      // 更新词元池数据
+      token.poolData = {
+        ...token.poolData,
+        name: updatedPoolData.name,
+        description: updatedPoolData.description,
+        tokens: updatedPoolData.tokens
+      };
+
+      // 更新显示文本
+      token.display = viewLanguage.value === 'zh'
+          ? updatedPoolData.name.zh
+          : updatedPoolData.name.en;
+    }
+  });
+
+  console.log('[App] 输出区词元池同步完成');
 };
 
 // 辅助函数：从分类中移除词元
@@ -897,11 +1093,39 @@ const removeTokenFromCategory = async (tokenId, categoryId, subcategoryId) => {
 };
 
 const reloadTokenData = async () => {
-  // ⭐ 直接使用顶层的方法
   await reloadData();
   const {getAllTokensFlat} = await import('./utils/tokenParser.js');
   setTokensMap(getAllTokensFlat(tokenCategories.value));
   await reloadGroups();
+
+  // ⭐ 重新加载后，同步所有输出区词元
+  syncAllOutputTokens();
+};
+
+// 新增：同步所有输出区词元
+const syncAllOutputTokens = () => {
+  console.log('[App] 开始同步所有输出区词元');
+
+  finalTokens.value.forEach((token, index) => {
+    if (token.mapping && token.mapping.id) {
+      // 从最新的词库中查找对应的词元
+      const updatedToken = allTokensFlat.value.find(t => t.id === token.mapping.id);
+
+      if (updatedToken) {
+        console.log(`[App] 同步输出区词元 ${index}:`, updatedToken.id);
+
+        // 更新映射数据
+        token.mapping = {...updatedToken};
+
+        // 更新显示文本
+        token.display = outputLanguage.value === LANGUAGES.ZH
+            ? updatedToken.zh
+            : updatedToken.en;
+      }
+    }
+  });
+
+  console.log('[App] 所有输出区词元同步完成');
 };
 
 const handleViewMappedToken = (token) => {

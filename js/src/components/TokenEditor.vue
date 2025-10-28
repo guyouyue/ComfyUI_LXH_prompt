@@ -966,6 +966,44 @@ watch(() => formData.value.subcategoryId, (newVal, oldVal) => {
   }
 });
 
+// 在现有的 watch 后面添加
+watch(() => props.categories, (newCategories, oldCategories) => {
+  // 只在分类数据变化且不是初始化阶段时刷新
+  if (!isInitializing.value && props.token && props.tokenType === 'single') {
+    console.log('[TokenEditor] 检测到分类数据变化，尝试刷新词元数据');
+
+    // 从最新的分类中查找当前编辑的词元
+    const tokenId = formData.value.id;
+    const categoryId = formData.value.categoryId;
+    const subcategoryId = formData.value.subcategoryId;
+
+    if (tokenId && categoryId && subcategoryId) {
+      const category = newCategories.find(cat => cat.id === categoryId);
+      if (category) {
+        const subcategory = category.subcategories.find(sub => sub.id === subcategoryId);
+        if (subcategory) {
+          const updatedToken = subcategory.tokens.find(t => t.id === tokenId);
+          if (updatedToken) {
+            console.log('[TokenEditor] 发现更新的词元数据，刷新表单');
+
+            // 更新表单数据
+            formData.value = {
+              ...formData.value,
+              zh: updatedToken.zh || '',
+              en: updatedToken.en || '',
+              jp: updatedToken.jp || '',
+              description: updatedToken.description || ''
+            };
+
+            // 更新系统词元标记
+            isSystemToken.value = updatedToken.source === 'system';
+          }
+        }
+      }
+    }
+  }
+}, {deep: true});
+
 const handleSave = () => {
   if (formData.value.categoryId === '__new__' || formData.value.subcategoryId === '__new__') {
     if (!confirm('您有未确认的新建分类，是否继续保存？未确认的分类将不会被创建。')) {
