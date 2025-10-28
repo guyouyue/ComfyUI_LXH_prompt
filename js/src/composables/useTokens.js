@@ -444,22 +444,30 @@ export function useTokens() {
         // 只保留标记为 'user' source 的数据
         const cleanedCategories = categories
             .filter(cat => {
-                // 只保留用户分类或包含用户词元的分类
+                // ⭐ 修改：保留所有 source === 'user' 的分类（即使是空的）
+                if (cat.source === 'user') {
+                    return true;
+                }
+                // 或者保留包含用户词元的分类（兼容从系统分类复制的情况）
                 const hasUserTokens = cat.subcategories?.some(sub =>
                     sub.tokens?.some(token => token.source === 'user')
                 );
-                return cat.source === 'user' || hasUserTokens;
+                return hasUserTokens;
             })
             .map(category => {
                 // 清洗子分类
-                const cleanedSubcategories = category.subcategories
+                const cleanedSubcategories = (category.subcategories || [])
                     .filter(sub => {
-                        // 只保留包含用户词元的子分类
+                        // ⭐ 修改：保留所有 source === 'user' 的子分类（即使是空的）
+                        if (sub.source === 'user') {
+                            return true;
+                        }
+                        // 或者保留包含用户词元的子分类
                         return sub.tokens?.some(token => token.source === 'user');
                     })
                     .map(subcategory => {
                         // 只保留用户词元
-                        const userOnlyTokens = subcategory.tokens.filter(token =>
+                        const userOnlyTokens = (subcategory.tokens || []).filter(token =>
                             token.source === 'user'
                         );
 
@@ -469,34 +477,31 @@ export function useTokens() {
                             description: subcategory.description,
                             source: 'user',
                             tokens: userOnlyTokens,
-                            createdAt: subcategory.createdAt,
+                            createdAt: subcategory.createdAt || Date.now(),
                             updatedAt: subcategory.updatedAt || Date.now()
                         };
-                    })
-                    .filter(sub => sub.tokens.length > 0); // 移除空子分类
+                    });
 
-                // 如果没有用户词元，返回 null
-                if (cleanedSubcategories.length === 0) {
-                    return null;
-                }
-
+                // ⭐ 修改：保留用户创建的分类（即使子分类为空）
                 return {
                     id: category.id,
                     name: category.name,
                     description: category.description,
                     source: 'user',
                     subcategories: cleanedSubcategories,
-                    createdAt: category.createdAt,
+                    createdAt: category.createdAt || Date.now(),
                     updatedAt: category.updatedAt || Date.now()
                 };
-            })
-            .filter(cat => cat !== null); // 移除空分类
+            });
 
         console.log('[cleanUserTokens] 清洗完成:', {
             original: categories.length,
             cleaned: cleanedCategories.length,
-            tokens: cleanedCategories.reduce((sum, cat) =>
-                sum + cat.subcategories.reduce((s, sub) => s + sub.tokens.length, 0), 0)
+            categories: cleanedCategories.map(c => ({
+                id: c.id,
+                subcategories: c.subcategories.length,
+                tokens: c.subcategories.reduce((s, sub) => s + sub.tokens.length, 0)
+            }))
         });
 
         return cleanedCategories;

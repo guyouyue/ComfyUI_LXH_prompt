@@ -1105,9 +1105,49 @@ const initializeFormData = () => {
   originalValue.value = props.token.value || props.token.original || '';
 
   if (props.tokenType === 'single') {
-    // ... 单个词元逻辑保持不变
+    const tokenData = props.token.mapping || props.token;
+    isSystemToken.value = tokenData.source === 'system';
+
+    const categoryId = props.token.categoryId || tokenData.categoryId || '';
+    const subcategoryId = props.token.subcategoryId || tokenData.subcategoryId || '';
+
+    console.log('[TokenEditor] 初始化词元，分类信息:', {
+      tokenCategoryId: props.token.categoryId,
+      tokenDataCategoryId: tokenData.categoryId,
+      finalCategoryId: categoryId,
+      tokenSubcategoryId: props.token.subcategoryId,
+      tokenDataSubcategoryId: tokenData.subcategoryId,
+      finalSubcategoryId: subcategoryId
+    });
+
+    formData.value = {
+      id: tokenData.id || tokenData.uniqueId || '',
+      zh: tokenData.zh || '',
+      en: tokenData.en || '',
+      jp: tokenData.jp || '',
+      categoryId: categoryId,
+      subcategoryId: subcategoryId,
+      description: tokenData.description || '',
+      isSystem: isSystemToken.value,
+      newCategoryName: '',
+      newSubcategoryName: '',
+      tempCategoryId: '',
+      tempSubcategoryId: ''
+    };
   } else if (props.tokenType === 'unmapped') {
-    // ... 未映射词元逻辑保持不变
+    formData.value = {
+      id: `user_${Date.now()}`,
+      zh: originalValue.value,
+      en: '',
+      jp: '',
+      categoryId: props.token.categoryId || '',
+      subcategoryId: props.token.subcategoryId || '',
+      description: `未映射词元: ${originalValue.value}`,
+      newCategoryName: '',
+      newSubcategoryName: '',
+      tempCategoryId: '',
+      tempSubcategoryId: ''
+    };
   } else if (props.tokenType === 'pool') {
     const poolData = props.token.poolData || props.token;
 
@@ -1164,7 +1204,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
+/* ==================== 基础布局 ==================== */
 .token-editor-embedded {
   display: flex;
   flex-direction: column;
@@ -1181,17 +1221,6 @@ onMounted(() => {
   min-height: 0;
 }
 
-.pool-form .form-section:last-child {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.pool-form .form-section:last-child h4 {
-  flex-shrink: 0; /* 标题不收缩 */
-}
-
 .editor-footer-embedded {
   padding: 12px 16px;
   border-top: 1px solid #404040;
@@ -1199,22 +1228,17 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   background: #252525;
+  flex-shrink: 0;
 }
 
-.btn-secondary {
-  background: #404040;
-}
-
-.btn-secondary:hover {
-  background: #4a4a4a;
-}
-
+/* ==================== 表单基础样式 ==================== */
 .form-section {
   margin-bottom: 16px;
   padding: 12px;
   background: #1e1e1e;
   border-radius: 6px;
   border: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .form-section h4 {
@@ -1242,7 +1266,9 @@ label {
   font-weight: 500;
 }
 
-.form-input, .form-select, .form-textarea {
+.form-input,
+.form-select,
+.form-textarea {
   padding: 6px 10px;
   background: #252525;
   border: 1px solid #404040;
@@ -1250,28 +1276,47 @@ label {
   color: #e0e0e0;
   font-size: 12px;
   font-family: inherit;
+  transition: border-color 0.2s;
 }
 
-.form-input:focus, .form-select:focus, .form-textarea:focus {
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
   outline: none;
   border-color: #0d7dd8;
+}
+
+.form-input:disabled {
+  background: #1a1a1a;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.form-select:disabled {
+  background: #1a1a1a;
+  color: #666;
+  cursor: not-allowed;
 }
 
 .form-textarea {
   resize: vertical;
   min-height: 60px;
+  line-height: 1.5;
 }
 
 .form-hint {
   font-size: 11px;
   color: #888;
+  margin-top: 2px;
 }
 
+/* ==================== 来源标识 ==================== */
 .source-badge {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
+  display: inline-block;
 }
 
 .source-badge.system {
@@ -1284,6 +1329,7 @@ label {
   color: white;
 }
 
+/* ==================== 警告横幅 ==================== */
 .warning-banner {
   background: #ff9800;
   color: #000;
@@ -1292,8 +1338,10 @@ label {
   margin-bottom: 16px;
   font-weight: 600;
   text-align: center;
+  font-size: 13px;
 }
 
+/* ==================== 词元预览 ==================== */
 .token-preview {
   display: flex;
   align-items: center;
@@ -1312,137 +1360,10 @@ label {
   color: #4CAF50;
   font-weight: 600;
   font-family: monospace;
-}
-
-.pool-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.pool-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #888;
-}
-
-.token-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 60px;
-}
-
-.pool-form {
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* 允许弹性布局 */
-}
-
-.token-list {
-  flex: 1;
-  overflow: visible; /* 确保不产生内部滚动 */
-}
-
-.pool-token-item {
-  padding: 10px;
-  background: #252525;
-  border: 1px solid #333;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.pool-token-item:hover {
-  border-color: #555;
-  background: #2a2a2a;
-}
-
-.pool-token-item.mapped-token {
-  border-left: 3px solid #666;
-}
-
-.token-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.token-index {
-  color: #888;
-  font-size: 12px;
-  min-width: 30px;
-}
-
-.token-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.token-text {
-  display: flex;
-  gap: 8px;
   font-size: 13px;
 }
 
-.lang-zh {
-  color: #4CAF50;
-}
-
-.lang-en {
-  color: #2196F3;
-}
-
-.token-original {
-  color: #ff9800;
-  font-family: monospace;
-}
-
-.token-source {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.view-btn, .edit-btn {
-  padding: 2px 8px;
-  background: #0d7dd8;
-  border: none;
-  border-radius: 3px;
-  color: white;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.edit-btn {
-  background: #4CAF50;
-}
-
-.token-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.weight-control {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.weight-input {
-  width: 60px;
-  padding: 2px 4px;
-  background: #1e1e1e;
-  border: 1px solid #404040;
-  border-radius: 3px;
-  color: #e0e0e0;
-  text-align: center;
-}
-
+/* ==================== 分类输入容器 ==================== */
 .category-input-container {
   position: relative;
 }
@@ -1463,13 +1384,15 @@ label {
   align-items: center;
 }
 
-.btn-confirm-new, .btn-cancel-new {
+.btn-confirm-new,
+.btn-cancel-new {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .btn-confirm-new {
@@ -1479,11 +1402,13 @@ label {
 
 .btn-confirm-new:hover:not(:disabled) {
   background: #45a049;
+  transform: translateY(-1px);
 }
 
 .btn-confirm-new:disabled {
   background: #cccccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .btn-cancel-new {
@@ -1493,70 +1418,106 @@ label {
 
 .btn-cancel-new:hover {
   background: #da190b;
+  transform: translateY(-1px);
 }
 
-button {
-  padding: 8px 16px;
-  border: none;
+/* ==================== 词元池表单 ==================== */
+.pool-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.pool-form .form-section {
+  flex-shrink: 0;
+}
+
+/* 词元列表 section 占据剩余空间 */
+.pool-form .form-section:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.pool-form .form-section:last-child h4 {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.pool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.pool-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #888;
+}
+
+.meta-item {
+  padding: 4px 8px;
+  background: #252525;
   border-radius: 4px;
-  cursor: pointer;
+}
+
+/* ==================== 词元列表 ==================== */
+.token-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* 自定义滚动条 */
+.token-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.token-list::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 3px;
+}
+
+.token-list::-webkit-scrollbar-thumb {
   background: #404040;
-  color: #fff;
+  border-radius: 3px;
+}
+
+.token-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* 空状态 */
+.token-list:empty::before {
+  content: '暂无词元，请添加...';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
   font-size: 13px;
-  transition: all 0.2s;
 }
 
-button:hover {
-  background: #4a4a4a;
-}
-
-button.primary {
-  background: #0d7dd8;
-}
-
-button.primary:hover:not(:disabled) {
-  background: #0c6dba;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 768px) {
-  .new-category-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-confirm-new, .btn-cancel-new {
-    width: 100%;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 词元池增强样式 */
+/* ==================== 词元池项目 ==================== */
 .pool-token-item {
+  flex-shrink: 0;
   padding: 12px;
   background: #252525;
   border: 1px solid #333;
   border-radius: 6px;
   transition: all 0.2s;
-  margin-bottom: 12px;
 }
 
 .pool-token-item:hover {
@@ -1621,8 +1582,10 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
+/* ==================== 多语言显示 ==================== */
 .token-languages {
   display: flex;
   flex-direction: column;
@@ -1660,25 +1623,59 @@ button:disabled {
   color: #FF9800;
 }
 
+/* ==================== 引用信息 ==================== */
 .reference-info {
   display: flex;
-  gap: 8px;
-  padding: 6px 10px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   background: rgba(102, 126, 234, 0.1);
   border-radius: 4px;
   font-size: 11px;
+  margin-top: 4px;
+}
+
+.reference-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.ref-item {
+  display: flex;
+  gap: 8px;
 }
 
 .ref-label {
   color: #888;
+  min-width: 40px;
 }
 
-.ref-path {
+.ref-path,
+.ref-value {
   color: #667eea;
   font-weight: 500;
 }
 
-.view-btn, .edit-btn, .delete-btn {
+.ref-value.zh {
+  color: #4CAF50;
+}
+
+.ref-value.en {
+  color: #2196F3;
+}
+
+.ref-error {
+  color: #f44336;
+  font-weight: 500;
+}
+
+/* ==================== 按钮样式 ==================== */
+.view-btn,
+.edit-btn,
+.delete-btn {
   padding: 4px 10px;
   border: none;
   border-radius: 3px;
@@ -1686,6 +1683,7 @@ button:disabled {
   font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .view-btn {
@@ -1694,6 +1692,7 @@ button:disabled {
 
 .view-btn:hover {
   background: #5568d3;
+  transform: translateY(-1px);
 }
 
 .edit-btn {
@@ -1702,6 +1701,7 @@ button:disabled {
 
 .edit-btn:hover {
   background: #45a049;
+  transform: translateY(-1px);
 }
 
 .delete-btn {
@@ -1710,8 +1710,10 @@ button:disabled {
 
 .delete-btn:hover {
   background: #da190b;
+  transform: translateY(-1px);
 }
 
+/* ==================== 权重控制 ==================== */
 .weight-control {
   display: flex;
   align-items: center;
@@ -1721,6 +1723,7 @@ button:disabled {
 .weight-control label {
   font-size: 11px;
   color: #888;
+  white-space: nowrap;
 }
 
 .weight-input {
@@ -1732,13 +1735,22 @@ button:disabled {
   color: #e0e0e0;
   text-align: center;
   font-size: 12px;
+  transition: border-color 0.2s;
 }
 
-/* 词元编辑表单 */
+.weight-input:focus {
+  outline: none;
+  border-color: #0d7dd8;
+}
+
+/* ==================== 词元编辑表单 ==================== */
 .token-edit-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 8px;
+  background: rgba(76, 175, 80, 0.05);
+  border-radius: 6px;
 }
 
 .edit-header {
@@ -1787,13 +1799,15 @@ button:disabled {
   border-top: 1px solid #333;
 }
 
-.btn-save, .btn-cancel {
+.btn-save,
+.btn-cancel {
   padding: 6px 16px;
   border: none;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .btn-save {
@@ -1803,6 +1817,7 @@ button:disabled {
 
 .btn-save:hover {
   background: #45a049;
+  transform: translateY(-1px);
 }
 
 .btn-cancel {
@@ -1812,15 +1827,111 @@ button:disabled {
 
 .btn-cancel:hover {
   background: #777;
+  transform: translateY(-1px);
 }
 
+/* ==================== 底部按钮 ==================== */
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #404040;
+  color: #fff;
+  font-size: 13px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+button:hover {
+  background: #4a4a4a;
+  transform: translateY(-1px);
+}
+
+button.primary {
+  background: #0d7dd8;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #0c6dba;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: #404040;
+}
+
+.btn-secondary:hover {
+  background: #4a4a4a;
+}
+
+/* ==================== 动画 ==================== */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
   .edit-row {
     grid-template-columns: 1fr;
   }
 
   .token-actions {
     flex-wrap: wrap;
+  }
+
+  .token-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .new-category-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-confirm-new,
+  .btn-cancel-new {
+    width: 100%;
+  }
+
+  .pool-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pool-meta {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+/* ==================== 打印样式 ==================== */
+@media print {
+  .editor-footer-embedded {
+    display: none;
+  }
+
+  .token-actions {
+    display: none;
   }
 }
 </style>

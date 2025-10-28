@@ -136,10 +136,10 @@ onUnmounted(() => {
 const parseInitialText = (text) => {
   console.log('[App] 解析初始文本:', text);
   finalTokens.value = parseTextToTokens(
-    text,
-    tokenCategories.value,
-    customGroups.value,  // 新增：传递自定义组合数据
-    outputMode.value
+      text,
+      tokenCategories.value,
+      customGroups.value,  // 新增：传递自定义组合数据
+      outputMode.value
   );
 
   console.log('[App] 解析后的词元:', finalTokens.value);
@@ -471,10 +471,14 @@ const handleTokenSave = async (saveData) => {
     }
 
     let success = false;
+    let newTokenId = null; // ⭐ 新增：保存新词元的 ID
+
     if (saveData.tokenType === 'single') {
       success = await handleSingleTokenSave(saveData);
     } else if (saveData.tokenType === 'unmapped') {
-      success = await handleUnmappedTokenSave(saveData);
+      const result = await handleUnmappedTokenSave(saveData);
+      success = result.success;
+      newTokenId = result.tokenId; // ⭐ 获取新生成的 ID
     } else if (saveData.tokenType === 'pool') {
       success = await handlePoolTokenSave(saveData);
     }
@@ -485,11 +489,13 @@ const handleTokenSave = async (saveData) => {
       // ⭐ 关键修改：从最新的 tokenCategories 中刷新编辑器数据
       if (saveData.tokenType === 'single' && editingToken.value) {
         refreshEditingToken(saveData.id, saveData.categoryId, saveData.subcategoryId);
-      } else if (saveData.tokenType === 'unmapped' && saveData.id) {
-        // 未映射词元保存后也需要刷新
-        refreshEditingToken(saveData.id, saveData.categoryId, saveData.subcategoryId);
+      } else if (saveData.tokenType === 'unmapped') {
+        // ⭐ 使用新生成的 ID 或原有的 ID
+        const tokenIdToRefresh = newTokenId || saveData.id;
+        if (tokenIdToRefresh) {
+          refreshEditingToken(tokenIdToRefresh, saveData.categoryId, saveData.subcategoryId);
+        }
       } else if (saveData.tokenType === 'pool' && saveData.poolKey) {
-        // 词元池保存后刷新
         refreshEditingPoolToken(saveData.poolKey);
       }
 
@@ -549,7 +555,7 @@ const refreshEditingPoolToken = (poolKey) => {
 
   try {
     const updatedPool = customGroups.value.find(group =>
-      group.key === poolKey || group.id === poolKey
+        group.key === poolKey || group.id === poolKey
     );
 
     if (!updatedPool) {
@@ -579,60 +585,93 @@ const handleNewCategoryCreation = (categoryData) => {
 };
 
 // 新增：创建临时分类到用户词库
-const createTempCategories = async (tempCategories, tempSubcategories) => {
-  if (!tempCategories || tempCategories.length === 0) {
-    return true;
-  }
-
-  // ⭐ 直接使用顶层的 userTokens 和 saveUserTokens，不要重新调用 useTokens()
+const createTempCategories = async (tempCategories = [], tempSubcategories = []) => {
   try {
     console.log('[App] 开始创建临时分类:', {
       categories: tempCategories.length,
       subcategories: tempSubcategories.length
     });
 
-    // 处理临时一级分类
+    // 1) 先处理传入的新一级分类，并把属于它们的子分类挂载进去
     for (const tempCat of tempCategories) {
       let existingCategory = userTokens.value.find(cat => cat.id === tempCat.id);
-
       if (!existingCategory) {
         const newCategory = {
           id: tempCat.id,
-          name: tempCat.name,
+          name: tempCat.name, // {zh,en}
           source: 'user',
-          subcategories: []
+          subcategories: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         };
         userTokens.value.push(newCategory);
         existingCategory = newCategory;
         console.log('[App] 创建新一级分类:', newCategory);
       }
 
-      // 处理该分类下的临时子分类
-      const relatedSubcats = tempSubcategories.filter(sub => sub.parentId === tempCat.id);
-      for (const tempSub of relatedSubcats) {
-        const existingSub = existingCategory.subcategories.find(sub => sub.id === tempSub.id);
-
-        if (!existingSub) {
-          const newSubcategory = {
+      const relatedSubs = tempSubcategories.filter(sub => sub.parentId === tempCat.id);
+      for (const tempSub of relatedSubs) {
+        const exists = existingCategory.subcategories.find(s => s.id === tempSub.id);
+        if (!exists) {
+          existingCategory.subcategories.push({
             id: tempSub.id,
-            name: tempSub.name,
+            name: tempSub.name, // {zh,en}
             source: 'user',
-            tokens: []
-          };
-          existingCategory.subcategories.push(newSubcategory);
-          console.log('[App] 创建新二级分类:', newSubcategory);
+            tokens: [],
+            description: tempSub.description || '',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          console.log('[App] 创建新二级分类:', tempSub);
         }
       }
     }
 
-    // 保存到用户词库（会自动更新内存数据）
-    const saved = await saveUserTokens();
+    // 2) 处理"仅子分类"（没传 tempCategories）也能生效
+    for (const tempSub of tempSubcategories) {
+      if (!tempSub?.parentId) continue;
 
-    console.log('[App] 临时分类已保存并同步到内存');
+      let parent = userTokens.value.find(cat => cat.id === tempSub.parentId);
+      if (!parent) {
+        parent = {
+          id: tempSub.parentId,
+          name: tempSub.parentName || {zh: `新建分类-${tempSub.parentId}`, en: `New Category-${tempSub.parentId}`},
+          source: 'user',
+          subcategories: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        userTokens.value.push(parent);
+        console.log('[App] 兜底创建父级分类:', parent);
+      }
 
-    return saved;
-  } catch (error) {
-    console.error('[App] 创建临时分类失败:', error);
+      const exists = parent.subcategories.find(s => s.id === tempSub.id);
+      if (!exists) {
+        parent.subcategories.push({
+          id: tempSub.id,
+          name: tempSub.name,
+          source: 'user',
+          tokens: [],
+          description: tempSub.description || '',
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        console.log('[App] 创建孤立二级分类:', tempSub);
+      }
+    }
+
+    // ⭐ 关键修改：只刷新合并数据，不要重新加载文件
+    // 因为此时临时分类只在内存中，还没有真正保存词元到分类中
+    await refreshMergedData(); // 使用 refreshMergedData 而不是 reloadTokenData
+
+    console.log('[App] 临时分类已创建并刷新合并数据', {
+      userTokensCount: userTokens.value.length,
+      tokenCategoriesCount: tokenCategories.value.length
+    });
+
+    return true;
+  } catch (e) {
+    console.error('[App] 创建临时分类失败:', e);
     return false;
   }
 };
@@ -642,9 +681,9 @@ const syncOutputTokens = (updatedTokenData) => {
   console.log('[App] 开始同步输出区词元数据:', updatedTokenData);
 
   finalTokens.value.forEach((token, index) => {
-    // 检查是否是同一个词元（通过ID匹配）
+    // ========== 1. 已映射词元：通过 ID 匹配 ==========
     if (token.mapping && token.mapping.id === updatedTokenData.id) {
-      console.log(`[App] 更新输出区词元 ${index}:`, token.mapping.id);
+      console.log(`[App] 更新输出区已映射词元 ${index}:`, token.mapping.id);
 
       // 更新映射数据
       token.mapping = {
@@ -652,31 +691,65 @@ const syncOutputTokens = (updatedTokenData) => {
         zh: updatedTokenData.zh,
         en: updatedTokenData.en,
         jp: updatedTokenData.jp,
-        description: updatedTokenData.description
+        description: updatedTokenData.description,
+        categoryId: updatedTokenData.categoryId,
+        subcategoryId: updatedTokenData.subcategoryId
       };
 
       // 更新显示文本
       token.display = outputLanguage.value === LANGUAGES.ZH
           ? updatedTokenData.zh
           : updatedTokenData.en;
+
+      return; // 已找到，继续下一个
     }
 
-    // 检查未映射词元（通过原始值匹配）
-    if (!token.mapping && token.original === updatedTokenData.originalValue) {
-      console.log(`[App] 更新未映射词元 ${index}:`, token.original);
+    // ========== 2. 未映射词元：多种匹配方式 ==========
+    if (!token.mapping) {
+      // 尝试多种匹配方式
+      const isMatch = (
+          // 方式1：通过 originalValue 匹配
+          (updatedTokenData.originalValue && token.original === updatedTokenData.originalValue) ||
+          // 方式2：通过 value 匹配
+          (token.value && (
+              token.value.toLowerCase() === updatedTokenData.en?.toLowerCase() ||
+              token.value.toLowerCase() === updatedTokenData.zh?.toLowerCase()
+          )) ||
+          // 方式3：通过 original 匹配
+          (token.original && (
+              token.original.toLowerCase() === updatedTokenData.en?.toLowerCase() ||
+              token.original.toLowerCase() === updatedTokenData.zh?.toLowerCase()
+          ))
+      );
 
-      // 如果是未映射词元变成了已映射词元
-      if (updatedTokenData.zh || updatedTokenData.en) {
+      if (isMatch) {
+        console.log(`[App] 未映射词元变为已映射 ${index}:`, {
+          original: token.original,
+          newMapping: updatedTokenData
+        });
+
+        // ⭐ 更新为已映射词元
         token.mapping = {
           id: updatedTokenData.id,
           zh: updatedTokenData.zh,
           en: updatedTokenData.en,
           jp: updatedTokenData.jp,
-          description: updatedTokenData.description
+          description: updatedTokenData.description,
+          source: 'user',
+          categoryId: updatedTokenData.categoryId,
+          subcategoryId: updatedTokenData.subcategoryId
         };
+
+        // 更新 value 为英文（标准格式）
+        token.value = updatedTokenData.en;
+        token.original = updatedTokenData.en;
+
+        // 更新显示文本
         token.display = outputLanguage.value === LANGUAGES.ZH
             ? updatedTokenData.zh
             : updatedTokenData.en;
+
+        console.log(`[App] 词元已更新为:`, token);
       }
     }
   });
@@ -1013,15 +1086,18 @@ const handleUnmappedTokenSave = async (saveData) => {
 
     const success = await saveUserTokenData();
     if (success) {
+      // ⭐ 新增：刷新编辑器数据
+      refreshEditingToken(newTokenData.id, saveData.categoryId, saveData.subcategoryId);
+
       alert('✅ 未映射词元已保存到用户词库');
-      return true; // ⭐ 返回成功
+      return true;
     } else {
       throw new Error('保存到文件失败');
     }
   } catch (error) {
     console.error('[App] 保存未映射词元失败:', error);
     alert('❌ 保存失败: ' + error.message);
-    return false; // ⭐ 返回失败
+    return false;
   }
 };
 
@@ -1032,7 +1108,7 @@ const handlePoolTokenSave = async (saveData) => {
     // ⭐ 第一步：查找 group
     const targetGroup = customGroups.value.find(group => {
       return group.id === saveData.groupId ||
-             group.id === saveData.groupKey;
+          group.id === saveData.groupKey;
     });
 
     if (!targetGroup) {
@@ -1058,7 +1134,7 @@ const handlePoolTokenSave = async (saveData) => {
 
     const poolItemIndex = targetGroup.pool.findIndex(item => {
       return item.id === saveData.poolId ||
-             item.id === saveData.id;
+          item.id === saveData.id;
     });
 
     if (poolItemIndex === -1) {
