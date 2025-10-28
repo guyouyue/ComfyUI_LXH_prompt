@@ -113,11 +113,14 @@ onMounted(async () => {
     viewLanguage.value = preferences.value.viewLanguage;
   }
 
+  // 先加载词库数据
   await loadTokenData();
-  const {setTokensMap} = useCustomGroups();
-  setTokensMap(allTokensFlat.value);
-  await loadCustomGroups();
 
+  // 设置词元映射并加载自定义组合
+  setTokensMap(allTokensFlat.value);
+  await loadCustomGroups();  // 确保这里等待加载完成
+
+  // 现在 customGroups 已经加载完成，可以正确解析词元池占位符
   if (props.initialText) {
     parseInitialText(props.initialText);
   }
@@ -131,7 +134,16 @@ onUnmounted(() => {
 
 // ===== 方法 =====
 const parseInitialText = (text) => {
-  finalTokens.value = parseTextToTokens(text, tokenCategories.value, outputMode.value);
+  console.log('[App] 解析初始文本:', text);
+  finalTokens.value = parseTextToTokens(
+    text,
+    tokenCategories.value,
+    customGroups.value,  // 新增：传递自定义组合数据
+    outputMode.value
+  );
+
+  console.log('[App] 解析后的词元:', finalTokens.value);
+
   finalTokens.value.forEach(token => {
     if (!token.original) {
       token.original = token.value;

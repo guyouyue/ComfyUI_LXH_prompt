@@ -6,10 +6,11 @@
  * 解析输入文本为词元数组
  * @param {string} text - 输入文本
  * @param {Array} tokenCategories - 词库分类
+ * @param {Array} customGroups - 自定义词元池分组
  * @param {string} mode - 模式 'token' 或 'natural'
  * @returns {Array} 词元数组
  */
-export function parseTextToTokens(text, tokenCategories, mode = 'token') {
+export function parseTextToTokens(text, tokenCategories, customGroups = [], mode = 'token') {
     if (!text || !text.trim()) {
         return [];
     }
@@ -27,6 +28,64 @@ export function parseTextToTokens(text, tokenCategories, mode = 'token') {
 
     // 转换为词元对象
     return parts.map((part, index) => {
+        // 检查是否为词元池占位符 {#%key#%}
+        const poolPlaceholderMatch = part.match(/^{#%(.+?)#%}$/);
+        if (poolPlaceholderMatch) {
+            const poolKey = poolPlaceholderMatch[1];
+            console.log(`[parseTextToTokens] 检测到词元池占位符: ${part}, key: ${poolKey}`);
+
+            // ⭐ 修正：在所有分组的 pool 数组中查找对应的词元池
+            let parentGroup = null;
+            let poolItem = null;
+
+            for (const group of customGroups) {
+                if (group.pool && Array.isArray(group.pool)) {
+                    const found = group.pool.find(item =>
+                        item.key === poolKey || item.id === poolKey
+                    );
+                    if (found) {
+                        parentGroup = group;
+                        poolItem = found;
+                        break;
+                    }
+                }
+            }
+
+            if (poolItem) {
+                console.log(`[parseTextToTokens] 找到对应的词元池:`, {
+                    poolItem,
+                    parentGroup: parentGroup.name
+                });
+
+                return {
+                    id: `pool_placeholder_${poolKey}_${index}`,
+                    value: part,
+                    original: part,
+                    display: poolItem.name?.zh || poolItem.name?.en || poolKey,
+                    mapping: null,
+                    isCustomPool: true,
+                    poolKey: poolKey,
+                    poolData: poolItem,
+                    // ⭐ 新增：保存父级分组信息
+                    groupId: parentGroup.id,
+                    groupKey: parentGroup.key,
+                    groupName: parentGroup.name
+                };
+            } else {
+                console.warn(`[parseTextToTokens] 未找到词元池占位符对应的词元池: ${part}`);
+                console.log('[parseTextToTokens] 当前 customGroups 结构:',
+                    customGroups.map(g => ({
+                        id: g.id,
+                        key: g.key,
+                        poolCount: g.pool?.length || 0,
+                        poolKeys: g.pool?.map(p => p.key || p.id) || []
+                    }))
+                );
+                // 如果没有找到对应的词元池，则作为未映射处理
+            }
+        }
+
+        // 如果不是词元池占位符，则按照普通词元处理
         const mapping = findTokenMapping(part, tokenMap);
 
         return {
@@ -35,7 +94,6 @@ export function parseTextToTokens(text, tokenCategories, mode = 'token') {
             original: part,
             display: part,
             mapping: mapping,
-            // 新增：保留分类信息
             categoryId: mapping?.categoryId || '',
             subcategoryId: mapping?.subcategoryId || '',
             categoryName: mapping?.categoryName || '',
@@ -57,6 +115,11 @@ export function tokensToText(tokens, mode = 'token', language = 'zh') {
     }
 
     const parts = tokens.map(token => {
+        // 如果是词元池占位符，保持原格式输出
+        if (token.isCustomPool) {
+            return token.value; // 返回原始的 {#%key#%} 格式
+        }
+
         if (mode === 'natural') {
             return token.display || token.value;
         }
