@@ -697,18 +697,24 @@ const getSubcategoryName = (subcategory) => {
 };
 
 const getSubcategories = (categoryId) => {
-  const category = props.categories.find(cat => cat.id === categoryId);
+  if (!categoryId) return [];
+
+  // 首先在现有分类中查找
+  const category = mergedCategories.value.find(cat => cat.id === categoryId);
   if (category) {
     const tempSubs = tempSubcategories.value.filter(sub => sub.parentId === categoryId);
     return [...category.subcategories, ...tempSubs];
   }
 
+  // 如果在现有分类中没找到，检查临时分类
   const tempCategory = tempCategories.value.find(cat => cat.id === categoryId);
   if (tempCategory) {
     const tempSubs = tempSubcategories.value.filter(sub => sub.parentId === categoryId);
     return tempSubs;
   }
 
+  // 如果都没找到，返回空数组而不是抛出错误
+  console.warn(`[TokenEditor] 未找到分类: ${categoryId}`);
   return [];
 };
 

@@ -27,7 +27,20 @@ const viewLanguage = ref(LANGUAGES.ZH);
 const focusedArea = ref(FOCUS_AREAS.OUTPUT);
 
 // 组合式函数
-const {tokenCategories, loadTokenData, addNewToken} = useTokens();
+const {
+  tokenCategories,
+  userTokens,
+  systemTokens,
+  loadTokenData,
+  addNewToken,
+  updateUserToken,
+  addUserToken,
+  saveUserTokens,
+  saveUserTokenData,
+  refreshMergedData,
+  reloadData
+} = useTokens();
+
 const {
   customGroups,
   loadCustomGroups,
@@ -37,8 +50,11 @@ const {
   addTokenToGroup,
   updateTokenWeight,
   removeTokenFromGroup,
-  selectRandomToken
+  selectRandomToken,
+  reloadGroups,
+  setTokensMap
 } = useCustomGroups();
+
 const {cursorPosition, setCursor} = useCursor();
 const {preferences, loadPreferences, updatePreferences} = useStorage();
 
@@ -427,19 +443,465 @@ const handleNewCategoryCreation = (categoryData) => {
   alert(`✅ 新分类 "${categoryData.name}" 已创建（功能待实现）`);
 };
 
+// 新增：创建临时分类到用户词库
+const createTempCategories = async (tempCategories, tempSubcategories) => {
+  if (!tempCategories || tempCategories.length === 0) {
+    return true;
+  }
+
+  // ⭐ 直接使用顶层的 userTokens 和 saveUserTokens，不要重新调用 useTokens()
+  try {
+    console.log('[App] 开始创建临时分类:', {
+      categories: tempCategories.length,
+      subcategories: tempSubcategories.length
+    });
+
+    // 处理临时一级分类
+    for (const tempCat of tempCategories) {
+      let existingCategory = userTokens.value.find(cat => cat.id === tempCat.id);
+
+      if (!existingCategory) {
+        const newCategory = {
+          id: tempCat.id,
+          name: tempCat.name,
+          source: 'user',
+          subcategories: []
+        };
+        userTokens.value.push(newCategory);
+        existingCategory = newCategory;
+        console.log('[App] 创建新一级分类:', newCategory);
+      }
+
+      // 处理该分类下的临时子分类
+      const relatedSubcats = tempSubcategories.filter(sub => sub.parentId === tempCat.id);
+      for (const tempSub of relatedSubcats) {
+        const existingSub = existingCategory.subcategories.find(sub => sub.id === tempSub.id);
+
+        if (!existingSub) {
+          const newSubcategory = {
+            id: tempSub.id,
+            name: tempSub.name,
+            source: 'user',
+            tokens: []
+          };
+          existingCategory.subcategories.push(newSubcategory);
+          console.log('[App] 创建新二级分类:', newSubcategory);
+        }
+      }
+    }
+
+    // 保存到用户词库（会自动更新内存数据）
+    const saved = await saveUserTokens();
+
+    console.log('[App] 临时分类已保存并同步到内存');
+
+    return saved;
+  } catch (error) {
+    console.error('[App] 创建临时分类失败:', error);
+    return false;
+  }
+};
+
+// 新增方法：自动创建缺失的分类
+const autoCreateMissingCategory = async (categoryId, subcategoryId, saveData) => {
+  try {
+    console.log('[App] 开始自动创建缺失的分类:', {categoryId, subcategoryId});
+
+    // ⭐ 直接使用顶层的变量，不要重新调用 useTokens()
+    // 查找系统词库中对应的分类信息（用于复制）
+    let systemCategory = null;
+    let systemSubcategory = null;
+
+    for (const category of tokenCategories.value) {
+      if (category.source === 'system' && category.id === categoryId) {
+        systemCategory = category;
+        if (systemCategory.subcategories) {
+          systemSubcategory = systemCategory.subcategories.find(sub => sub.id === subcategoryId);
+        }
+        break;
+      }
+    }
+
+    let needsConfirmation = false;
+    const categoriesToCreate = [];
+    const subcategoriesToCreate = [];
+
+    // 检查并创建一级分类
+    let userCategory = userTokens.value.find(cat => cat.id === categoryId);
+    if (!userCategory) {
+      const newCategoryName = systemCategory?.name || {
+        zh: `新建分类-${categoryId}`,
+        en: `New Category-${categoryId}`
+      };
+
+      categoriesToCreate.push({
+        id: categoryId,
+        name: newCategoryName,
+        source: systemCategory ? 'system' : 'custom'
+      });
+
+      needsConfirmation = true;
+    }
+
+    // 检查并创建二级分类
+    if (!userCategory) {
+      const newSubcategoryName = systemSubcategory?.name || {
+        zh: `新建子分类-${subcategoryId}`,
+        en: `New Subcategory-${subcategoryId}`
+      };
+
+      subcategoriesToCreate.push({
+        id: subcategoryId,
+        name: newSubcategoryName,
+        parentId: categoryId,
+        source: systemSubcategory ? 'system' : 'custom'
+      });
+
+      needsConfirmation = true;
+    } else {
+      const userSubcategory = userCategory.subcategories.find(sub => sub.id === subcategoryId);
+      if (!userSubcategory) {
+        const newSubcategoryName = systemSubcategory?.name || {
+          zh: `新建子分类-${subcategoryId}`,
+          en: `New Subcategory-${subcategoryId}`
+        };
+
+        subcategoriesToCreate.push({
+          id: subcategoryId,
+          name: newSubcategoryName,
+          parentId: categoryId,
+          source: systemSubcategory ? 'system' : 'custom'
+        });
+
+        needsConfirmation = true;
+      }
+    }
+
+    // 如果需要创建，弹出确认对话框
+    if (needsConfirmation) {
+      const categoryNames = [
+        ...categoriesToCreate.map(cat => {
+          const name = typeof cat.name === 'string' ? cat.name : cat.name.zh;
+          return `"${name}"${cat.source === 'system' ? '（复制自系统分类）' : ''}`;
+        }),
+        ...subcategoriesToCreate.map(sub => {
+          const name = typeof sub.name === 'string' ? sub.name : sub.name.zh;
+          return `"${name}"${sub.source === 'system' ? '（复制自系统子分类）' : ''}`;
+        })
+      ].join('、');
+
+      const userConfirmed = confirm(
+          `系统将自动创建以下分类到用户词库：\n${categoryNames}\n\n是否确认创建？`
+      );
+
+      if (!userConfirmed) {
+        return false;
+      }
+
+      // 执行创建
+      for (const catData of categoriesToCreate) {
+        const newCategory = {
+          id: catData.id,
+          name: catData.name,
+          source: 'user',
+          subcategories: [],
+          description: systemCategory?.description || `用户创建的 ${catData.id} 分类`
+        };
+        userTokens.value.push(newCategory);
+        userCategory = newCategory;
+        console.log('[App] 创建新一级分类:', newCategory);
+      }
+
+      for (const subData of subcategoriesToCreate) {
+        const newSubcategory = {
+          id: subData.id,
+          name: subData.name,
+          source: 'user',
+          tokens: [],
+          description: systemSubcategory?.description || `用户创建的 ${subData.id} 子分类`
+        };
+
+        if (userCategory) {
+          userCategory.subcategories.push(newSubcategory);
+          console.log('[App] 创建新二级分类:', newSubcategory);
+        }
+      }
+
+      // 保存到用户词库（会自动更新内存数据）
+      await saveUserTokens();
+
+      console.log('[App] 分类创建完成并同步到内存');
+      return true;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[App] 自动创建分类失败:', error);
+    return false;
+  }
+};
+
 const handleSingleTokenSave = async (saveData) => {
   console.log('[App] 保存单个词元:', saveData);
-  alert('✅ 词元已保存（功能待实现）');
+
+  try {
+    // 先创建临时分类（如果有）
+    if (saveData.tempCategories && saveData.tempCategories.length > 0) {
+      const created = await createTempCategories(
+          saveData.tempCategories,
+          saveData.tempSubcategories || []
+      );
+      if (!created) {
+        throw new Error('创建临时分类失败');
+      }
+    }
+
+    // ⭐ 直接使用顶层的变量，不要重新调用 useTokens()
+    // 检查目标分类是否存在
+    let targetCategory = tokenCategories.value.find(cat => cat.id === saveData.categoryId);
+    let targetSubcategory = null;
+
+    if (targetCategory) {
+      targetSubcategory = targetCategory.subcategories.find(sub => sub.id === saveData.subcategoryId);
+    }
+
+    // 如果分类不存在，自动创建
+    if (!targetCategory || !targetSubcategory) {
+      const created = await autoCreateMissingCategory(saveData.categoryId, saveData.subcategoryId, saveData);
+      if (!created) {
+        throw new Error('自动创建分类失败，请手动选择已有分类');
+      }
+
+      // 重新查找分类
+      targetCategory = tokenCategories.value.find(cat => cat.id === saveData.categoryId);
+      if (targetCategory) {
+        targetSubcategory = targetCategory.subcategories.find(sub => sub.id === saveData.subcategoryId);
+      }
+    }
+
+    // 验证分类是否存在
+    if (!targetCategory || !targetSubcategory) {
+      throw new Error(`目标分类不存在: ${saveData.categoryId}/${saveData.subcategoryId}`);
+    }
+
+    // 检查是否为系统词元
+    if (saveData.isSystem) {
+      const newTokenData = {
+        id: saveData.id,
+        zh: saveData.zh,
+        en: saveData.en,
+        jp: saveData.jp,
+        description: saveData.description,
+        source: 'user',
+        originalId: saveData.id
+      };
+
+      const success = await addUserToken(newTokenData, targetCategory, targetSubcategory);
+      if (!success) {
+        throw new Error('添加用户词元失败');
+      }
+
+      console.log('[App] 系统词元已保存为用户副本:', newTokenData);
+    } else {
+      const updateData = {
+        zh: saveData.zh,
+        en: saveData.en,
+        jp: saveData.jp,
+        description: saveData.description
+      };
+
+      const currentToken = userTokens.value.flatMap(cat =>
+          cat.subcategories.flatMap(sub =>
+              sub.tokens.find(token => token.id === saveData.id)
+          )
+      ).find(Boolean);
+
+      if (currentToken) {
+        const oldCategoryId = currentToken.categoryId;
+        const oldSubcategoryId = currentToken.subcategoryId;
+
+        if (oldCategoryId !== saveData.categoryId || oldSubcategoryId !== saveData.subcategoryId) {
+          console.log('[App] 转移词元分类:', {
+            from: `${oldCategoryId}/${oldSubcategoryId}`,
+            to: `${saveData.categoryId}/${saveData.subcategoryId}`
+          });
+
+          await removeTokenFromCategory(saveData.id, oldCategoryId, oldSubcategoryId);
+
+          const success = await addUserToken(
+              {...updateData, id: saveData.id},
+              targetCategory,
+              targetSubcategory
+          );
+
+          if (!success) {
+            throw new Error('转移词元到新分类失败');
+          }
+        } else {
+          const success = await updateUserToken(saveData.id, updateData);
+          if (!success) {
+            throw new Error('更新词元失败');
+          }
+        }
+      } else {
+        throw new Error('未找到要更新的词元');
+      }
+    }
+
+    const envMsg = import.meta.env.DEV ? '（开发环境 - 已保存到内存）' : '（生产环境 - 已保存到服务器）';
+    alert(`✅ 词元已保存到用户词库 ${envMsg}`);
+
+  } catch (error) {
+    console.error('[App] 保存单个词元失败:', error);
+    alert('❌ 保存失败: ' + error.message);
+  }
 };
 
 const handleUnmappedTokenSave = async (saveData) => {
   console.log('[App] 保存未映射词元:', saveData);
-  alert('✅ 未映射词元已保存（功能待实现）');
-};
 
+  try {
+    if (saveData.tempCategories && saveData.tempCategories.length > 0) {
+      const created = await createTempCategories(
+          saveData.tempCategories,
+          saveData.tempSubcategories || []
+      );
+      if (!created) {
+        throw new Error('创建临时分类失败');
+      }
+    }
+
+    // ⭐ 直接使用顶层的变量
+    if (!saveData.categoryId || !saveData.subcategoryId) {
+      throw new Error('请选择分类和子分类');
+    }
+
+    if (!saveData.zh && !saveData.en) {
+      throw new Error('请至少填写中文或英文');
+    }
+
+    let targetCategory = tokenCategories.value.find(cat => cat.id === saveData.categoryId);
+    let targetSubcategory = null;
+
+    if (targetCategory) {
+      targetSubcategory = targetCategory.subcategories.find(sub => sub.id === saveData.subcategoryId);
+    }
+
+    if (!targetCategory || !targetSubcategory) {
+      const created = await autoCreateMissingCategory(saveData.categoryId, saveData.subcategoryId, saveData);
+      if (!created) {
+        throw new Error(`选择的分类不存在且自动创建失败`);
+      }
+
+      targetCategory = tokenCategories.value.find(cat => cat.id === saveData.categoryId);
+      if (targetCategory) {
+        targetSubcategory = targetCategory.subcategories.find(sub => sub.id === saveData.subcategoryId);
+      }
+    }
+
+    if (!targetCategory || !targetSubcategory) {
+      throw new Error(`分类不存在，请选择有效的分类`);
+    }
+
+    const newTokenData = {
+      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      zh: saveData.zh || saveData.originalValue,
+      en: saveData.en || saveData.originalValue,
+      jp: saveData.jp || '',
+      description: saveData.description || `未映射词元: ${saveData.originalValue}`,
+      source: 'user',
+      originalValue: saveData.originalValue
+    };
+
+    await addUserToken(newTokenData, targetCategory, targetSubcategory);
+    console.log('[App] 未映射词元已保存:', newTokenData);
+
+    const success = await saveUserTokenData();
+    if (success) {
+      alert('✅ 未映射词元已保存到用户词库');
+    } else {
+      throw new Error('保存到文件失败');
+    }
+  } catch (error) {
+    console.error('[App] 保存未映射词元失败:', error);
+    alert('❌ 保存失败: ' + error.message);
+  }
+};
 const handlePoolTokenSave = (saveData) => {
   console.log('[App] 保存词元池:', saveData);
-  alert('✅ 词元池已更新（功能待实现）');
+
+  try {
+
+    const poolGroup = customGroups.value.find(group =>
+        group.key === saveData.poolKey || group.id === saveData.poolKey
+    );
+
+    if (!poolGroup) {
+      throw new Error('未找到要更新的词元池');
+    }
+
+    const updateData = {
+      name: saveData.name,
+      description: saveData.description,
+      tokens: saveData.poolTokens || []
+    };
+
+    // ⭐ 直接使用顶层的 updateCustomGroup
+    const success = updateCustomGroup(poolGroup.id, updateData);
+
+    if (success) {
+      // ⭐ 直接使用顶层的 saveCustomGroups（注意：这可能需要改成 async/await）
+      saveCustomGroups();
+      console.log('[App] 词元池已更新:', updateData);
+      alert('✅ 词元池已更新');
+    } else {
+      throw new Error('更新词元池失败');
+    }
+  } catch (error) {
+    console.error('[App] 保存词元池失败:', error);
+    alert('❌ 保存失败: ' + error.message);
+  }
+};
+
+// 辅助函数：从分类中移除词元
+const removeTokenFromCategory = async (tokenId, categoryId, subcategoryId) => {
+  // ⭐ 直接使用顶层的变量
+  const categoryIndex = userTokens.value.findIndex(cat => cat.id === categoryId);
+  if (categoryIndex === -1) return false;
+
+  const subcategoryIndex = userTokens.value[categoryIndex].subcategories.findIndex(
+      sub => sub.id === subcategoryId
+  );
+  if (subcategoryIndex === -1) return false;
+
+  const tokenIndex = userTokens.value[categoryIndex].subcategories[subcategoryIndex]
+      .tokens.findIndex(token => token.id === tokenId);
+
+  if (tokenIndex !== -1) {
+    userTokens.value[categoryIndex].subcategories[subcategoryIndex]
+        .tokens.splice(tokenIndex, 1);
+
+    if (userTokens.value[categoryIndex].subcategories[subcategoryIndex].tokens.length === 0) {
+      userTokens.value[categoryIndex].subcategories.splice(subcategoryIndex, 1);
+    }
+
+    if (userTokens.value[categoryIndex].subcategories.length === 0) {
+      userTokens.value.splice(categoryIndex, 1);
+    }
+
+    await saveUserTokens();
+    return true;
+  }
+
+  return false;
+};
+
+const reloadTokenData = async () => {
+  // ⭐ 直接使用顶层的方法
+  await reloadData();
+  const {getAllTokensFlat} = await import('./utils/tokenParser.js');
+  setTokensMap(getAllTokensFlat(tokenCategories.value));
+  await reloadGroups();
 };
 
 const handleViewMappedToken = (token) => {

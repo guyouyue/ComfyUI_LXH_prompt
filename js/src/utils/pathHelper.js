@@ -48,19 +48,18 @@ export function getUserDataPath(filename) {
 }
 
 /**
- * 保存用户数据的路径
+ * 保存用户数据的路径（词组）
  */
 export function getSaveUserDataPath() {
-    if (import.meta.env.DEV) {
-        return '/lxh_prompt/saveUserData'; // 开发环境使用Vite中间件
-    }
+    // 开发环境和生产环境都使用相同的路径
     return '/lxh_prompt/saveUserData';
 }
 
+/**
+ * 保存用户词库的路径
+ */
 export function getSaveUserTokensPath() {
-    if (import.meta.env.DEV) {
-        return '/lxh_prompt/saveUserTokens'; // 开发环境使用Vite中间件
-    }
+    // 开发环境和生产环境都使用相同的路径
     return '/lxh_prompt/saveUserTokens';
 }
 
@@ -93,5 +92,7 @@ export function printEnvInfo() {
     console.log('基础路径:', getBasePath());
     console.log('数据文件路径示例:', getDataPath('data.json'));
     console.log('用户文件路径示例:', getUserDataPath('group.json'));
+    console.log('保存词库路径:', getSaveUserTokensPath());
+    console.log('保存用户数据路径:', getSaveUserDataPath());
     console.groupEnd();
 }

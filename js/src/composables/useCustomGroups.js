@@ -16,7 +16,6 @@ export function useCustomGroups() {
     };
 
     // 解析组合中的词元（处理 quote 和 new 类型）
-    // 解析组合中的词元（处理 quote 和 new 类型）
     const parseGroupTokens = (group) => {
         if (!group.tokens) {
             console.log('[parseGroupTokens] 组合没有 tokens 字段:', group.key);
@@ -238,26 +237,81 @@ export function useCustomGroups() {
         return customGroups.value.find(g => g.key === key || g.id === key);
     };
 
-    // 保存到本地存储
+    // 保存到本地存储（合并保存）
     const saveCustomGroups = async () => {
         try {
-            const dataToSave = customGroups.value.map(g => ({
-                id: g.id,
-                key: g.key,
-                zh: g.zh,
-                en: g.en,
-                description: g.description,
-                tokens: g.tokens,
-                createdAt: g.createdAt,
-                updatedAt: g.updatedAt
-            }));
+            const env = import.meta.env.DEV ? '🔧 开发环境' : '📦 生产环境';
+            console.group(`💾 [useCustomGroups] 保存词组数据 (${env})`);
 
-            localStorage.setItem('lxh_custom_groups', JSON.stringify(dataToSave));
-            console.log('[useCustomGroups] 已保存到 localStorage');
+            // 1. 读取现有数据
+            let existingData = {groups: []};
+            try {
+                const groupPath = getUserDataPath('group.json');
+                const response = await fetch(groupPath);
+                if (response.ok) {
+                    existingData = await response.json();
+                    console.log('📖 读取现有词组，数量:', existingData.groups?.length || 0);
+                }
+            } catch (error) {
+                console.warn('⚠️ 读取现有词组失败，使用空数据:', error);
+            }
 
-            return true;
+            // 2. 合并数据
+            const groupMap = new Map();
+
+            // 添加现有词组
+            (existingData.groups || []).forEach(group => {
+                groupMap.set(group.id, group);
+            });
+
+            // 更新/添加当前词组
+            customGroups.value.forEach(group => {
+                groupMap.set(group.id, {
+                    ...groupMap.get(group.id),
+                    ...group,
+                    updatedAt: Date.now()
+                });
+            });
+
+            const mergedGroups = Array.from(groupMap.values());
+
+            const dataToSave = {
+                groups: mergedGroups,
+                updatedAt: Date.now()
+            };
+
+            console.log('📊 合并结果:', {
+                existing: existingData.groups?.length || 0,
+                current: customGroups.value.length,
+                merged: mergedGroups.length
+            });
+
+            // 3. 保存
+            const savePath = getSaveUserDataPath();
+            console.log('保存路径:', savePath);
+
+            const response = await fetch(savePath, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dataToSave)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ 保存成功:', result);
+                console.groupEnd();
+                return true;
+            } else {
+                const errorText = await response.text();
+                console.error('❌ 保存失败:', response.status, errorText);
+                console.groupEnd();
+                return false;
+            }
         } catch (error) {
-            console.error('[useCustomGroups] 保存失败:', error);
+            console.error('❌ 保存异常:', error);
+            console.groupEnd();
             return false;
         }
     };
