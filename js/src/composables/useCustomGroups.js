@@ -1,88 +1,143 @@
+// src/composables/useCustomGroups.js
 import {ref} from 'vue';
-import {getUserDataPath, getSaveUserDataPath} from '../utils/pathHelper.js';
+import {getSaveUserDataPath, getUserDataPath} from '../utils/pathHelper.js';
+
+// ⭐ 全局单例状态（移到函数外部）
+const customGroups = ref([]);
+const allTokensMap = ref(new Map());
+
+// ⭐ 初始化标记
+let isInitialized = false;
 
 export function useCustomGroups() {
-    const customGroups = ref([]);
-    const allTokensMap = ref(new Map()); // 用于存储所有词元的映射
-
     // 设置词库映射（从外部传入）
     const setTokensMap = (tokensFlat) => {
         console.log('[useCustomGroups] 设置词元映射，接收词元数量:', tokensFlat.length);
         allTokensMap.value.clear();
         tokensFlat.forEach(token => {
-            allTokensMap.value.set(token.id, token);
+            if (token.id) allTokensMap.value.set(token.id, token);
+            if (token.uniqueId) allTokensMap.value.set(token.uniqueId, token);
+            if (token.en) allTokensMap.value.set(token.en.toLowerCase(), token);
+            if (token.zh) allTokensMap.value.set(token.zh.toLowerCase(), token);
         });
         console.log('[useCustomGroups] 词元映射设置完成，映射大小:', allTokensMap.value.size);
     };
 
-    // 解析组合中的词元（处理 quote 和 new 类型）
-    const parseGroupTokens = (group) => {
-        if (!group.tokens) {
-            console.log('[parseGroupTokens] 组合没有 tokens 字段:', group.key);
+    // 查找引用的词元
+    const findReferencedToken = (tokenId) => {
+        if (!tokenId) return null;
+
+        const found = allTokensMap.value.get(tokenId) ||
+            allTokensMap.value.get(tokenId.toLowerCase()) ||
+            Array.from(allTokensMap.value.values()).find(t =>
+                t.id === tokenId ||
+                t.en === tokenId ||
+                t.zh === tokenId
+            );
+
+        if (found) {
+            console.log(`[useCustomGroups] 找到引用词元: ${tokenId}`, found);
+        } else {
+            console.warn(`[useCustomGroups] 未找到引用词元: ${tokenId}`);
+        }
+
+        return found;
+    };
+
+    // 解析词元池中的词元
+    const parsePoolTokens = (poolItem) => {
+        if (!poolItem || !poolItem.tokens || !Array.isArray(poolItem.tokens)) {
+            console.warn('[parsePoolTokens] 词元池数据无效:', poolItem);
             return [];
         }
 
-        console.log(`[parseGroupTokens] 开始解析组合 "${group.key}"，词元定义数量:`, group.tokens.length);
+        console.log(`[parsePoolTokens] 解析词元池 "${poolItem.id}"，词元数量:`, poolItem.tokens.length);
 
-        const parsedTokens = group.tokens.map((tokenDef, index) => {
-            console.log(`[parseGroupTokens] 处理第 ${index + 1} 个词元定义:`, tokenDef);
-
+        return poolItem.tokens.map((tokenDef) => {
             if (tokenDef.type === 'quote') {
-                // 引用类型：从词库中查找
-                console.log(`[parseGroupTokens] 查找引用词元 ID: ${tokenDef.id}`);
-                const referencedToken = allTokensMap.value.get(tokenDef.id);
-                if (referencedToken) {
-                    console.log(`[parseGroupTokens] 找到引用词元:`, referencedToken);
+                const referenced = findReferencedToken(tokenDef.id);
+                if (referenced) {
                     return {
-                        ...referencedToken,
+                        ...referenced,
                         weight: tokenDef.weight || 1,
-                        isQuoted: true
+                        isReference: true,
+                        type: 'quote'
                     };
-                } else {
-                    console.warn(`[parseGroupTokens] 未找到引用词元 ID: ${tokenDef.id}`);
-                    return null;
                 }
+                return null;
             } else if (tokenDef.type === 'new') {
-                // 新建类型：直接使用
-                console.log(`[parseGroupTokens] 处理新建词元:`, tokenDef);
                 return {
                     id: tokenDef.id,
                     zh: tokenDef.zh,
                     en: tokenDef.en,
+                    jp: tokenDef.jp,
                     weight: tokenDef.weight || 1,
-                    isNew: true
+                    isReference: false,
+                    type: 'new'
                 };
             }
-            console.warn(`[parseGroupTokens] 未知的词元类型: ${tokenDef.type}`);
             return null;
         }).filter(Boolean);
-
-        console.log(`[parseGroupTokens] 组合 "${group.key}" 解析完成，有效词元数量:`, parsedTokens.length);
-        return parsedTokens;
     };
 
     // 加载自定义组合
     const loadCustomGroups = async () => {
+        // ⭐ 避免重复加载
+        if (isInitialized) {
+            console.log('[useCustomGroups] 已初始化，跳过重复加载');
+            return true;
+        }
+
         try {
-            console.log('[useCustomGroups] 开始加载自定义组合');
+            console.log('[useCustomGroups] 📥 开始加载自定义组合');
 
             const groupPath = getUserDataPath('group.json');
-            console.log('[useCustomGroups] 请求路径:', groupPath);
-
             const response = await fetch(groupPath);
+
             if (response.ok) {
                 const data = await response.json();
-                customGroups.value = (data.groups || []).map(group => ({
-                    ...group,
-                    expanded: false,
-                    parsedTokens: parseGroupTokens(group) // 解析后的词元
-                }));
+                const groupsData = data.groups || [];
+
+                console.log('[useCustomGroups] 📊 原始数据:', groupsData.length);
+
+                customGroups.value = groupsData.map(group => {
+                    const processedPool = (group.pool || []).map(poolItem => {
+                        const parsedTokens = parsePoolTokens(poolItem);
+
+                        return {
+                            ...poolItem,
+                            parsedTokens
+                        };
+                    });
+
+                    return {
+                        ...group,
+                        pool: processedPool,
+                        expanded: false
+                    };
+                });
+
+                // ⭐ 标记已初始化
+                isInitialized = true;
+
+                console.log('[useCustomGroups] ✅ 加载完成', {
+                    count: customGroups.value.length,
+                    data: customGroups.value
+                });
+
                 return true;
+            } else {
+                console.warn('[useCustomGroups] ⚠️ 文件不存在，使用空数组');
+                customGroups.value = [];
+                isInitialized = true;
+                return false;
             }
         } catch (error) {
-            console.warn('[useCustomGroups] 加载失败:', error);
+            console.error('[useCustomGroups] ❌ 加载失败:', error);
             customGroups.value = [];
+            isInitialized = true;
 
+            // 尝试从 localStorage 恢复
             try {
                 const saved = localStorage.getItem('lxh_custom_groups');
                 if (saved) {
@@ -90,160 +145,26 @@ export function useCustomGroups() {
                     customGroups.value = data.map(group => ({
                         ...group,
                         expanded: false,
-                        parsedTokens: parseGroupTokens(group)
+                        pool: (group.pool || []).map(poolItem => ({
+                            ...poolItem,
+                            parsedTokens: parsePoolTokens(poolItem)
+                        }))
                     }));
                     console.log('[useCustomGroups] 从 localStorage 恢复', customGroups.value.length, '个组合');
                 }
             } catch (e) {
                 console.error('[useCustomGroups] localStorage 恢复失败:', e);
             }
+            return false;
         }
-        return false;
     };
 
-    // 添加新组合
-    const addCustomGroup = (groupData) => {
-        const newGroup = {
-            id: groupData.id || `group_${Date.now()}`,
-            key: groupData.key || groupData.id || `group_${Date.now()}`,
-            zh: groupData.zh || '',
-            en: groupData.en || '',
-            description: groupData.description || groupData.zh || groupData.en,
-            tokens: groupData.tokens || [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            expanded: false,
-            parsedTokens: parseGroupTokens(groupData)
-        };
-
-        customGroups.value.push(newGroup);
-        console.log('[useCustomGroups] 添加组合:', newGroup);
-
-        saveCustomGroups();
-        return newGroup;
-    };
-
-    // 更新组合
-    const updateCustomGroup = (groupId, updates) => {
-        const index = customGroups.value.findIndex(g => g.id === groupId);
-        if (index !== -1) {
-            customGroups.value[index] = {
-                ...customGroups.value[index],
-                ...updates,
-                updatedAt: Date.now(),
-                parsedTokens: parseGroupTokens({
-                    ...customGroups.value[index],
-                    ...updates
-                })
-            };
-            console.log('[useCustomGroups] 更新组合:', groupId);
-            saveCustomGroups();
-            return true;
-        }
-        return false;
-    };
-
-    // 删除组合
-    const deleteCustomGroup = (groupId) => {
-        const index = customGroups.value.findIndex(g => g.id === groupId);
-        if (index !== -1) {
-            customGroups.value.splice(index, 1);
-            console.log('[useCustomGroups] 删除组合:', groupId);
-            saveCustomGroups();
-            return true;
-        }
-        return false;
-    };
-
-    // 添加候选词元到组合
-    const addTokenToGroup = (groupId, tokenData) => {
-        const group = customGroups.value.find(g => g.id === groupId);
-        if (group) {
-            const newToken = {
-                type: 'new',
-                id: tokenData.id || `token_${Date.now()}`,
-                zh: tokenData.zh,
-                en: tokenData.en,
-                weight: tokenData.weight || 1,
-                addedAt: Date.now()
-            };
-
-            group.tokens.push(newToken);
-            group.updatedAt = Date.now();
-            group.parsedTokens = parseGroupTokens(group);
-            console.log('[useCustomGroups] 添加词元到组合:', groupId, newToken);
-
-            saveCustomGroups();
-            return newToken;
-        }
-        return null;
-    };
-
-    // 更新组合中的词元权重
-    const updateTokenWeight = (groupId, tokenId, weight) => {
-        const group = customGroups.value.find(g => g.id === groupId);
-        if (group) {
-            const token = group.tokens.find(t => t.id === tokenId);
-            if (token) {
-                token.weight = weight;
-                group.updatedAt = Date.now();
-                group.parsedTokens = parseGroupTokens(group);
-                saveCustomGroups();
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // 从组合中移除词元
-    const removeTokenFromGroup = (groupId, tokenId) => {
-        const group = customGroups.value.find(g => g.id === groupId);
-        if (group) {
-            const index = group.tokens.findIndex(t => t.id === tokenId);
-            if (index !== -1) {
-                group.tokens.splice(index, 1);
-                group.updatedAt = Date.now();
-                group.parsedTokens = parseGroupTokens(group);
-                saveCustomGroups();
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // 根据权重随机选择一个词元
-    const selectRandomToken = (groupId) => {
-        const group = customGroups.value.find(g => g.id === groupId);
-        if (!group || !group.parsedTokens || group.parsedTokens.length === 0) {
-            return null;
-        }
-
-        const totalWeight = group.parsedTokens.reduce((sum, token) => sum + (token.weight || 1), 0);
-        let random = Math.random() * totalWeight;
-
-        for (const token of group.parsedTokens) {
-            random -= (token.weight || 1);
-            if (random <= 0) {
-                console.log('[useCustomGroups] 选中词元:', token, '来自组合:', groupId);
-                return token;
-            }
-        }
-
-        return group.parsedTokens[group.parsedTokens.length - 1];
-    };
-
-    // 根据 key 获取组合
-    const getGroupByKey = (key) => {
-        return customGroups.value.find(g => g.key === key || g.id === key);
-    };
-
-    // 保存到本地存储（合并保存）
+    // 保存自定义组合
     const saveCustomGroups = async () => {
         try {
             const env = import.meta.env.DEV ? '🔧 开发环境' : '📦 生产环境';
             console.group(`💾 [useCustomGroups] 保存词组数据 (${env})`);
 
-            // ⭐ 清理数据：移除运行时属性
             const cleanGroups = customGroups.value.map(group => ({
                 id: group.id,
                 name: group.name,
@@ -262,7 +183,6 @@ export function useCustomGroups() {
             };
 
             console.log('词组数量:', cleanGroups.length);
-            console.log('保存数据预览:', JSON.stringify(dataToSave, null, 2).substring(0, 500));
 
             const savePath = getSaveUserDataPath();
             console.log('保存路径:', savePath);
@@ -279,6 +199,14 @@ export function useCustomGroups() {
                 const result = await response.json();
                 console.log('✅ 保存成功:', result);
                 console.groupEnd();
+
+                // ⭐ 保存到 localStorage 作为备份
+                try {
+                    localStorage.setItem('lxh_custom_groups', JSON.stringify(customGroups.value));
+                } catch (e) {
+                    console.warn('localStorage 保存失败:', e);
+                }
+
                 return true;
             } else {
                 const errorText = await response.text();
@@ -293,26 +221,83 @@ export function useCustomGroups() {
         }
     };
 
-    // 重新加载（开发用）
+    const addCustomGroup = (groupData) => {
+        const newGroup = {
+            id: groupData.id || `group_${Date.now()}`,
+            name: groupData.name || {zh: '', en: ''},
+            pool: groupData.pool || [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            expanded: false
+        };
+
+        customGroups.value.push(newGroup);
+        console.log('[useCustomGroups] 添加组合:', newGroup);
+
+        saveCustomGroups();
+        return newGroup;
+    };
+
+    const updateCustomGroup = (groupId, updates) => {
+        const index = customGroups.value.findIndex(g => g.id === groupId);
+        if (index !== -1) {
+            customGroups.value[index] = {
+                ...customGroups.value[index],
+                ...updates,
+                updatedAt: Date.now()
+            };
+            console.log('[useCustomGroups] 更新组合:', groupId);
+            saveCustomGroups();
+            return true;
+        }
+        return false;
+    };
+
+    const deleteCustomGroup = (groupId) => {
+        const index = customGroups.value.findIndex(g => g.id === groupId);
+        if (index !== -1) {
+            customGroups.value.splice(index, 1);
+            console.log('[useCustomGroups] 删除组合:', groupId);
+            saveCustomGroups();
+            return true;
+        }
+        return false;
+    };
+
     const reloadGroups = async () => {
         console.log('[useCustomGroups] 🔄 重新加载组合...');
         customGroups.value = [];
+        // ⭐ 重置初始化标记
+        isInitialized = false;
         return await loadCustomGroups();
     };
 
+    const getPoolByKey = (poolKey) => {
+        for (const group of customGroups.value) {
+            if (group.pool) {
+                const found = group.pool.find(p => p.id === poolKey || p.key === poolKey);
+                if (found) {
+                    return {
+                        ...found,
+                        groupId: group.id,
+                        groupName: group.name
+                    };
+                }
+            }
+        }
+        return null;
+    };
+
+    // ⭐ 返回全局单例 ref
     return {
         customGroups,
         loadCustomGroups,
         addCustomGroup,
         updateCustomGroup,
         deleteCustomGroup,
-        addTokenToGroup,
-        updateTokenWeight,
-        removeTokenFromGroup,
-        selectRandomToken,
-        getGroupByKey,
         setTokensMap,
         saveCustomGroups,
-        reloadGroups
+        reloadGroups,
+        getPoolByKey,
     };
 }
