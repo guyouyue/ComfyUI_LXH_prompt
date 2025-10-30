@@ -23,12 +23,13 @@ const state = {
     editingToken: ref(null),
     editingTokenType: ref('single'), // 'single', 'unmapped', 'pool'
     showEditor: ref(false),
-};
 
-// 在现有的 ref 定义后添加：
-const showCategoryEditor = ref(false);
-const editingCategory = ref(null);
-const editingCategoryType = ref(null); // 'category' | 'subcategory' | 'pool'
+
+    // ⭐ 分类编辑器状态
+    showCategoryEditor: ref(false),
+    editingCategory: ref(null),
+    editingCategoryType: ref(null), // 'category' | 'subcategory' | 'pool'
+};
 
 export function useAppStore() {
     // ========== Getters (计算属性) ==========
@@ -50,7 +51,7 @@ export function useAppStore() {
         return state.finalTokens.value.filter(t => t.isCustomPool).length;
     });
 
-    // ========== Actions (状态修改方法) ==========
+    // ========== Actions ==========
     const setOutputMode = (mode) => {
         state.outputMode.value = mode;
     };
@@ -105,16 +106,29 @@ export function useAppStore() {
         state.finalTokens.value = tokens;
     };
 
+    // ⭐ 修改：打开词元编辑器时清空分类编辑器状态
     const openEditor = (token, type) => {
         state.editingToken.value = token;
         state.editingTokenType.value = type;
         state.showEditor.value = true;
+
+        // ⭐ 清空分类编辑器状态
+        state.editingCategory.value = null;
+        state.editingCategoryType.value = null;
+        state.showCategoryEditor.value = false;
+
+        console.log('[AppStore] 打开词元编辑器:', {type, token});
     };
 
     const closeEditor = () => {
         state.editingToken.value = null;
         state.editingTokenType.value = 'single';
         state.showEditor.value = false;
+
+        // ⭐ 同时清空分类编辑器
+        state.editingCategory.value = null;
+        state.editingCategoryType.value = null;
+        state.showCategoryEditor.value = false;
     };
 
     const updateEditingToken = (updates) => {
@@ -146,24 +160,24 @@ export function useAppStore() {
         state.showingTokenSelector.value = false;
     };
 
-    /**
-     * 打开分类编辑器
-     */
+    // ⭐ 修改：打开分类编辑器时清空词元编辑器状态
     const openCategoryEditor = (categoryData, categoryType) => {
-        editingCategory.value = categoryData;
-        editingCategoryType.value = categoryType;
-        showCategoryEditor.value = true;
-        state.showEditor.value = true; // 显示编辑面板
+        state.editingCategory.value = categoryData;
+        state.editingCategoryType.value = categoryType;
+        state.showCategoryEditor.value = true;
+        state.showEditor.value = true;
+
+        // ⭐ 清空词元编辑器状态
+        state.editingToken.value = null;
+        state.editingTokenType.value = null;
+
         console.log('[AppStore] 打开分类编辑器:', {categoryType, categoryData});
     };
 
-    /**
-     * 关闭分类编辑器
-     */
     const closeCategoryEditor = () => {
-        editingCategory.value = null;
-        editingCategoryType.value = null;
-        showCategoryEditor.value = false;
+        state.editingCategory.value = null;
+        state.editingCategoryType.value = null;
+        state.showCategoryEditor.value = false;
         state.showEditor.value = false;
         console.log('[AppStore] 关闭分类编辑器');
     };
@@ -183,6 +197,11 @@ export function useAppStore() {
         editingToken: state.editingToken,
         editingTokenType: state.editingTokenType,
         showEditor: state.showEditor,
+
+        // ⭐ 分类编辑器状态
+        showCategoryEditor: state.showCategoryEditor,
+        editingCategory: state.editingCategory,
+        editingCategoryType: state.editingCategoryType,
 
         // Getters
         hasEditingToken,
@@ -208,9 +227,6 @@ export function useAppStore() {
         closeGroupDialog,
         openTokenSelector,
         closeTokenSelector,
-        showCategoryEditor,
-        editingCategory,
-        editingCategoryType,
         openCategoryEditor,
         closeCategoryEditor,
     };

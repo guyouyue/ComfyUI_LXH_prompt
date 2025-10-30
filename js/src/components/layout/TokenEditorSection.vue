@@ -13,7 +13,7 @@
       />
       <!-- 单个词元编辑 -->
       <TokenEditorSingle
-          v-if="tokenType === 'single'"
+          v-else-if="tokenType === 'single'"
           :form-data="state.formData.value"
           :is-system-token="state.isSystemToken.value"
           :categories="categories"

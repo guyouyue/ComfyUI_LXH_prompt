@@ -12,8 +12,7 @@ export function useCategoryManagement() {
      * 打开分类编辑器
      */
     const openCategoryEditor = (categoryData, categoryType) => {
-        console.log('[CategoryMgmt] 打开分类编辑器:', {categoryData, categoryType});
-
+        console.log('[CategoryManagement] 打开分类编辑器:', {categoryType, categoryData});
         store.openCategoryEditor(categoryData, categoryType);
     };
 
@@ -21,135 +20,161 @@ export function useCategoryManagement() {
      * 保存分类编辑
      */
     const saveCategoryEdit = async (saveData) => {
-        console.log('[CategoryMgmt] 保存分类编辑:', saveData);
+        console.log('[CategoryManagement] 保存分类数据:', saveData);
 
         try {
-            if (saveData.categoryType === 'pool') {
-                // 词元池分组编辑
-                return await savePoolGroupEdit(saveData);
-            } else {
-                // 分类/子分类编辑
+            if (saveData.categoryType === 'category') {
                 return await saveCategoryData(saveData);
+            } else if (saveData.categoryType === 'subcategory') {
+                return await saveSubcategoryData(saveData);
+            } else if (saveData.categoryType === 'pool') {
+                return await savePoolGroupData(saveData);
             }
+            return false;
         } catch (error) {
-            console.error('[CategoryMgmt] 保存失败:', error);
+            console.error('[CategoryManagement] 保存失败:', error);
             alert('❌ 保存失败: ' + error.message);
             return false;
         }
     };
 
     /**
-     * 保存分类/子分类数据
+     * 保存一级分类
      */
     const saveCategoryData = async (saveData) => {
-        const {id, name, description, categoryType, isSystem} = saveData;
+        console.log('[CategoryManagement] 保存一级分类:', saveData);
 
-        if (isSystem) {
-            // 系统分类：创建用户副本
-            console.log('[CategoryMgmt] 创建系统分类的用户副本');
+        // 查找目标分类
+        let targetCategory = userTokens.value.find(cat => cat.id === saveData.id);
 
-            if (categoryType === 'category') {
-                // 一级分类副本
-                const newCategory = {
-                    id: id,
-                    name: {...name},
-                    description: description,
-                    source: 'user',
-                    subcategories: [],
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                };
-                userTokens.value.push(newCategory);
-            } else {
-                // 二级分类副本
-                const parentId = saveData.parentId;
-                let parentCategory = userTokens.value.find(cat => cat.id === parentId);
-
-                if (!parentCategory) {
-                    // 父级分类也不存在，需要先创建
-                    const systemParent = saveData.parentData;
-                    parentCategory = {
-                        id: systemParent.id,
-                        name: {...systemParent.name},
-                        description: systemParent.description || '',
-                        source: 'user',
-                        subcategories: [],
-                        createdAt: Date.now(),
-                        updatedAt: Date.now()
-                    };
-                    userTokens.value.push(parentCategory);
-                }
-
-                const newSubcategory = {
-                    id: id,
-                    name: {...name},
-                    description: description,
-                    source: 'user',
-                    tokens: [],
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                };
-                parentCategory.subcategories.push(newSubcategory);
-            }
-
-            await saveUserTokens();
-            await refreshMergedData();
-
-            alert('✅ 已创建用户副本');
-            return true;
+        if (!targetCategory) {
+            // 新建分类
+            targetCategory = {
+                id: saveData.id,
+                name: saveData.name,
+                description: saveData.description,
+                source: 'user',
+                subcategories: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            userTokens.value.push(targetCategory);
+            console.log('[CategoryManagement] 新建一级分类:', targetCategory);
         } else {
-            // 用户分类：直接更新
-            console.log('[CategoryMgmt] 更新用户分类');
+            // 更新现有分类
+            targetCategory.name = saveData.name;
+            targetCategory.description = saveData.description;
+            targetCategory.updatedAt = Date.now();
+            console.log('[CategoryManagement] 更新一级分类:', targetCategory);
+        }
 
-            if (categoryType === 'category') {
-                const category = userTokens.value.find(cat => cat.id === id);
-                if (category) {
-                    category.name = {...name};
-                    category.description = description;
-                    category.updatedAt = Date.now();
-                }
-            } else {
-                const parentId = saveData.parentId;
-                const parentCategory = userTokens.value.find(cat => cat.id === parentId);
-                if (parentCategory) {
-                    const subcategory = parentCategory.subcategories.find(sub => sub.id === id);
-                    if (subcategory) {
-                        subcategory.name = {...name};
-                        subcategory.description = description;
-                        subcategory.updatedAt = Date.now();
-                    }
-                }
-            }
-
-            await saveUserTokens();
+        // 保存到文件
+        const saved = await saveUserTokens();
+        if (saved) {
             await refreshMergedData();
-
-            alert('✅ 分类已更新');
+            alert('✅ 一级分类已保存');
             return true;
         }
+        return false;
     };
 
     /**
-     * 保存词元池分组编辑
+     * 保存二级分类
      */
-    const savePoolGroupEdit = async (saveData) => {
-        const {id, name, description} = saveData;
+    const saveSubcategoryData = async (saveData) => {
+        console.log('[CategoryManagement] 保存二级分类:', saveData);
 
-        console.log('[CategoryMgmt] 更新词元池分组:', id);
-
-        const group = customGroups.value.find(g => g.id === id);
-        if (group) {
-            group.name = {...name};
-            group.description = description;
-            group.updatedAt = Date.now();
-
-            await saveCustomGroups();
-
-            alert('✅ 词元池分组已更新');
-            return true;
+        // ⭐ 关键：需要从 saveData 中获取父级分类信息
+        const parentId = saveData.parentId || saveData.parentData?.id;
+        if (!parentId) {
+            throw new Error('缺少父级分类信息');
         }
 
-        throw new Error('未找到词元池分组');
+        // 查找父级分类
+        let parentCategory = userTokens.value.find(cat => cat.id === parentId);
+
+        if (!parentCategory) {
+            // 如果父级分类不存在，创建它
+            const parentData = saveData.parentData;
+            if (!parentData) {
+                throw new Error('未找到父级分类数据');
+            }
+
+            parentCategory = {
+                id: parentData.id,
+                name: parentData.name,
+                description: parentData.description || '',
+                source: 'user',
+                subcategories: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            userTokens.value.push(parentCategory);
+            console.log('[CategoryManagement] 创建父级分类:', parentCategory);
+        }
+
+        // 查找目标子分类
+        let targetSubcategory = parentCategory.subcategories.find(sub => sub.id === saveData.id);
+
+        if (!targetSubcategory) {
+            // 新建子分类
+            targetSubcategory = {
+                id: saveData.id,
+                name: saveData.name,
+                description: saveData.description,
+                source: 'user',
+                tokens: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            parentCategory.subcategories.push(targetSubcategory);
+            console.log('[CategoryManagement] 新建二级分类:', targetSubcategory);
+        } else {
+            // 更新现有子分类
+            targetSubcategory.name = saveData.name;
+            targetSubcategory.description = saveData.description;
+            targetSubcategory.updatedAt = Date.now();
+            console.log('[CategoryManagement] 更新二级分类:', targetSubcategory);
+        }
+
+        // 更新父级分类的更新时间
+        parentCategory.updatedAt = Date.now();
+
+        // 保存到文件
+        const saved = await saveUserTokens();
+        if (saved) {
+            await refreshMergedData();
+            alert('✅ 二级分类已保存');
+            return true;
+        }
+        return false;
+    };
+
+    /**
+     * 保存词元池分组
+     */
+    const savePoolGroupData = async (saveData) => {
+        console.log('[CategoryManagement] 保存词元池分组:', saveData);
+
+        // 查找目标分组
+        const targetGroup = customGroups.value.find(group => group.id === saveData.id);
+
+        if (!targetGroup) {
+            throw new Error(`未找到词元池分组: ${saveData.id}`);
+        }
+
+        // 更新分组数据
+        targetGroup.name = saveData.name;
+        targetGroup.description = saveData.description;
+        targetGroup.updatedAt = Date.now();
+
+        // 保存到文件
+        const saved = await saveCustomGroups();
+        if (saved) {
+            alert('✅ 词元池分组已保存');
+            return true;
+        }
+        return false;
     };
 
     return {

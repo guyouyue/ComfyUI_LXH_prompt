@@ -121,6 +121,8 @@ const formData = reactive({
   createdAt: null,
   subcategories: [],
   tokens: [],
+  parentId: null,
+  parentData: null,
 });
 
 // ========== 计算属性 ==========
@@ -195,6 +197,9 @@ watch(() => props.categoryData, (newData) => {
     formData.createdAt = newData.createdAt;
     formData.subcategories = newData.subcategories || [];
     formData.tokens = newData.tokens || [];
+    // ⭐ 保存父级信息（用于二级分类）
+    formData.parentId = newData.parentId;
+    formData.parentData = newData.parentData;
   }
 }, {immediate: true});
 </script>
