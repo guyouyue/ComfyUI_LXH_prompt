@@ -27,8 +27,8 @@ defineEmits(['click', 'dblclick']);
 .pool-item-tag {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 2px;
+  padding: 4px 4px;
   background: linear-gradient(135deg, #667eea, #764ba2);
   border: 1px solid #764ba2;
   border-radius: 6px;

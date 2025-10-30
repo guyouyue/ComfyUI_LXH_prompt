@@ -732,7 +732,7 @@ h3 {
 }
 
 .panel-header {
-  padding: 12px 16px;
+  padding: 2px 6px;
   border-bottom: 1px solid #404040;
   background: #2a2a2a;
   display: flex;

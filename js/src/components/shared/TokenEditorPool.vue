@@ -118,8 +118,8 @@ const handleUpdateWeight = (index, weight) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 12px;
+  margin-bottom: 6px;
+  padding: 2px;
   background: #1e1e1e;
   border-radius: 6px;
   border: 1px solid #333;

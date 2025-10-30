@@ -111,7 +111,7 @@ const isExpanded = (categoryId) => {
 }
 
 .category-header {
-  padding: 8px 12px;
+  padding: 2px 2px;
   background: #2a2a2a;
   border-radius: 6px;
   cursor: pointer;
@@ -160,7 +160,7 @@ const isExpanded = (categoryId) => {
 }
 
 .category-content {
-  padding-left: 16px;
+  padding-left: 2px;
   margin-top: 4px;
   animation: slideDown 0.3s ease-out;
 }
@@ -181,7 +181,7 @@ const isExpanded = (categoryId) => {
 }
 
 .subcategory-header {
-  padding: 6px 10px;
+  padding: 4px 4px;
   background: #232323;
   border-radius: 4px;
   display: flex;
@@ -237,7 +237,7 @@ const isExpanded = (categoryId) => {
 }
 
 .token-list-container {
-  padding: 8px 0 8px 20px;
+  padding: 2px 0 2px 4px;
   animation: fadeIn 0.2s ease-out;
 }
 

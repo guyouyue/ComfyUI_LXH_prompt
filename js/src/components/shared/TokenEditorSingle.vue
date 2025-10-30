@@ -136,7 +136,7 @@ const tokenSource = computed(() => {
 }
 
 .form-section {
-  margin-bottom: 16px;
+  margin-bottom: 6px;
   padding: 6px;
   background: #1e1e1e;
   border-radius: 6px;
@@ -154,7 +154,7 @@ const tokenSource = computed(() => {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 6px;
 }
 
 .form-group {
