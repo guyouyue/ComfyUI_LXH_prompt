@@ -60,19 +60,19 @@
           </div>
         </div>
 
-        <!-- 多语言内容展示 -->
+        <!-- ⭐ 修复：多语言内容展示 - 正确传递参数 (token, lang) -->
         <div class="token-languages">
-          <div class="lang-item" v-if="getLanguageValue('zh')">
+          <div class="lang-item" v-if="getLanguageValue(token, 'zh') && getLanguageValue(token, 'zh') !== '无数据'">
             <span class="lang-label">中文:</span>
-            <span class="lang-value zh">{{ getLanguageValue('zh') }}</span>
+            <span class="lang-value zh">{{ getLanguageValue(token, 'zh') }}</span>
           </div>
-          <div class="lang-item" v-if="getLanguageValue('en')">
+          <div class="lang-item" v-if="getLanguageValue(token, 'en') && getLanguageValue(token, 'en') !== '无数据'">
             <span class="lang-label">英文:</span>
-            <span class="lang-value en">{{ getLanguageValue('en') }}</span>
+            <span class="lang-value en">{{ getLanguageValue(token, 'en') }}</span>
           </div>
-          <div class="lang-item" v-if="getLanguageValue('jp')">
+          <div class="lang-item" v-if="getLanguageValue(token, 'jp') && getLanguageValue(token, 'jp') !== '无数据'">
             <span class="lang-label">日文:</span>
-            <span class="lang-value jp">{{ getLanguageValue('jp') }}</span>
+            <span class="lang-value jp">{{ getLanguageValue(token, 'jp') }}</span>
           </div>
         </div>
 
@@ -191,7 +191,7 @@ defineEmits([
 </script>
 
 <style scoped>
-/* 这里包含 TokenEditor 中词元池项目的所有样式 */
+/* 样式保持不变 */
 .pool-token-item {
   flex-shrink: 0;
   padding: 12px;

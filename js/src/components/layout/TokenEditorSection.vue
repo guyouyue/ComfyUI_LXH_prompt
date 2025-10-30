@@ -31,6 +31,8 @@
         :get-subcategory-name="category.getSubcategoryName"
         :get-subcategories="category.getSubcategories"
         @update:form-data="state.formData.value = $event"
+        @confirm-category="category.confirmNewCategory"
+        @cancel-new="category.cancelNewCategory"
       />
 
       <!-- 词元池编辑 -->

@@ -19,45 +19,65 @@
       <h4>🌐 多语言映射</h4>
       <div class="form-row">
         <div class="form-group">
-          <label>中文映射 (zh)</label>
+          <label>中文映射 (zh) <span class="required">*</span></label>
           <input
-            type="text"
-            :value="formData.zh"
-            @input="$emit('update:form-data', { ...formData, zh: $event.target.value })"
-            :placeholder="`建议值: ${originalValue}`"
-            class="form-input"
+              type="text"
+              :value="formData.zh"
+              @input="$emit('update:form-data', { ...formData, zh: $event.target.value })"
+              :placeholder="`建议值: ${originalValue}`"
+              class="form-input"
           />
         </div>
         <div class="form-group">
-          <label>英文映射 (en)</label>
+          <label>英文映射 (en) <span class="required">*</span></label>
           <input
-            type="text"
-            :value="formData.en"
-            @input="$emit('update:form-data', { ...formData, en: $event.target.value })"
-            placeholder="英文映射"
-            class="form-input"
+              type="text"
+              :value="formData.en"
+              @input="$emit('update:form-data', { ...formData, en: $event.target.value })"
+              placeholder="英文映射"
+              class="form-input"
           />
+        </div>
+      </div>
+      <!-- 日语输入框 -->
+      <div class="form-row" style="margin-top: 12px;">
+        <div class="form-group">
+          <label>日文映射 (jp)</label>
+          <input
+              type="text"
+              :value="formData.jp"
+              @input="$emit('update:form-data', { ...formData, jp: $event.target.value })"
+              placeholder="日文映射（可选）"
+              class="form-input"
+          />
+          <span class="form-hint">选填：日语翻译</span>
         </div>
       </div>
     </div>
 
-    <!-- 保存到分类 -->
+    <!-- ⭐ 修改：保存到分类（添加缺失的 props 和 events） -->
     <div class="form-section">
-      <h4>📁 保存到分类</h4>
+      <h4>📁 分类信息 <span class="required">*</span></h4>
       <CategorySelector
-        :category-id="formData.categoryId"
-        :subcategory-id="formData.subcategoryId"
-        :categories="categories"
-        :temp-categories="tempCategories"
-        :temp-subcategories="tempSubcategories"
-        :language="language"
-        :required="true"
-        :allow-new="false"
-        :get-subcategories="getSubcategories"
-        :get-category-name="getCategoryName"
-        :get-subcategory-name="getSubcategoryName"
-        @update:category-id="$emit('update:form-data', { ...formData, categoryId: $event })"
-        @update:subcategory-id="$emit('update:form-data', { ...formData, subcategoryId: $event })"
+          :category-id="formData.categoryId"
+          :subcategory-id="formData.subcategoryId"
+          :categories="categories"
+          :temp-categories="tempCategories"
+          :temp-subcategories="tempSubcategories"
+          :language="language"
+          :required="true"
+          :allow-new="true"
+          :new-category-name="formData.newCategoryName"
+          :new-subcategory-name="formData.newSubcategoryName"
+          :get-subcategories="getSubcategories"
+          :get-category-name="getCategoryName"
+          :get-subcategory-name="getSubcategoryName"
+          @update:category-id="$emit('update:form-data', { ...formData, categoryId: $event })"
+          @update:subcategory-id="$emit('update:form-data', { ...formData, subcategoryId: $event })"
+          @update:new-category-name="$emit('update:form-data', { ...formData, newCategoryName: $event })"
+          @update:new-subcategory-name="$emit('update:form-data', { ...formData, newSubcategoryName: $event })"
+          @confirm-category="$emit('confirm-category', $event)"
+          @cancel-new="$emit('cancel-new')"
       />
     </div>
 
@@ -65,11 +85,11 @@
     <div class="form-section">
       <h4>📝 描述信息（可选）</h4>
       <textarea
-        :value="formData.description"
-        @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
-        placeholder="添加词元描述..."
-        class="form-textarea"
-        rows="2"
+          :value="formData.description"
+          @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
+          placeholder="添加词元描述..."
+          class="form-textarea"
+          rows="2"
       ></textarea>
     </div>
   </div>
@@ -90,10 +110,16 @@ defineProps({
   getSubcategories: Function,
 });
 
-defineEmits(['update:form-data']);
+// ⭐ 添加缺失的 emits
+defineEmits([
+  'update:form-data',
+  'confirm-category',
+  'cancel-new',
+]);
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .unmapped-form {
   display: flex;
   flex-direction: column;
@@ -164,6 +190,11 @@ label {
   font-weight: 500;
 }
 
+.required {
+  color: #f44336;
+  margin-left: 4px;
+}
+
 .form-input,
 .form-textarea {
   padding: 6px 10px;
@@ -186,6 +217,11 @@ label {
   resize: vertical;
   min-height: 60px;
   line-height: 1.5;
+}
+
+.form-hint {
+  color: #888;
+  font-size: 11px;
 }
 
 @media (max-width: 768px) {
