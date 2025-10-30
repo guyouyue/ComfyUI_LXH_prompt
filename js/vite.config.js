@@ -9,20 +9,17 @@ function devDataHandler() {
         name: 'dev-data-handler',
 
         configureServer(server) {
-            console.log('📡 开发服务器已启动，直接读取本地数据文件...');
 
             // 读取系统词库数据
             server.middlewares.use('/lxh_prompt/getData', (req, res) => {
                 try {
                     const dataPath = resolve(__dirname, '../data/data.json');
-                    console.log('📝 [DEV] 读取系统词库:', dataPath);
 
                     if (existsSync(dataPath)) {
                         const data = readFileSync(dataPath, 'utf-8');
                         res.setHeader('Content-Type', 'application/json');
                         res.setHeader('Cache-Control', 'no-cache');
                         res.end(data);
-                        console.log('✅ [DEV] 系统词库加载成功');
                     } else {
                         console.warn('⚠️ [DEV] 系统词库文件不存在');
                         res.statusCode = 404;
@@ -39,14 +36,12 @@ function devDataHandler() {
             server.middlewares.use('/lxh_prompt/getUserTokens', (req, res) => {
                 try {
                     const dataPath = resolve(__dirname, '../data_user/data.json');
-                    console.log('📝 [DEV] 读取用户词库:', dataPath);
 
                     if (existsSync(dataPath)) {
                         const data = readFileSync(dataPath, 'utf-8');
                         res.setHeader('Content-Type', 'application/json');
                         res.setHeader('Cache-Control', 'no-cache');
                         res.end(data);
-                        console.log('✅ [DEV] 用户词库加载成功');
                     } else {
                         console.warn('⚠️ [DEV] 用户词库文件不存在，返回空数据');
                         res.setHeader('Content-Type', 'application/json');
@@ -63,14 +58,12 @@ function devDataHandler() {
             server.middlewares.use('/lxh_prompt/getUserData', (req, res) => {
                 try {
                     const dataPath = resolve(__dirname, '../data_user/group.json');
-                    console.log('📝 [DEV] 读取用户词组:', dataPath);
 
                     if (existsSync(dataPath)) {
                         const data = readFileSync(dataPath, 'utf-8');
                         res.setHeader('Content-Type', 'application/json');
                         res.setHeader('Cache-Control', 'no-cache');
                         res.end(data);
-                        console.log('✅ [DEV] 用户词组加载成功');
                     } else {
                         console.warn('⚠️ [DEV] 用户词组文件不存在，返回空数据');
                         res.setHeader('Content-Type', 'application/json');
@@ -93,9 +86,6 @@ function devDataHandler() {
                             const data = JSON.parse(body);
                             const dataPath = resolve(__dirname, '../data_user/group.json');
 
-                            console.log('💾 [DEV] 保存用户词组到:', dataPath);
-                            console.log('💾 [DEV] 词组数量:', data.groups?.length || 0);
-
                             // 确保目录存在
                             mkdirSync(dirname(dataPath), {recursive: true});
 
@@ -108,8 +98,6 @@ function devDataHandler() {
                                 message: '用户词组保存成功',
                                 timestamp: Date.now()
                             }));
-
-                            console.log('✅ [DEV] 用户词组保存成功');
                         } catch (error) {
                             console.error('❌ [DEV] 保存用户词组失败:', error);
                             res.statusCode = 500;
@@ -136,14 +124,10 @@ function devDataHandler() {
                             const data = JSON.parse(body);
                             const dataPath = resolve(__dirname, '../data_user/data.json');
 
-                            console.log('💾 [DEV] 保存用户词库到:', dataPath);
-                            console.log('💾 [DEV] 分类数量:', data.categories?.length || 0);
-
                             // 统计词元总数
                             const tokenCount = data.categories?.reduce((sum, cat) =>
                                 sum + (cat.subcategories?.reduce((s, sub) =>
                                     s + (sub.tokens?.length || 0), 0) || 0), 0) || 0;
-                            console.log('💾 [DEV] 词元总数:', tokenCount);
 
                             // 确保目录存在
                             mkdirSync(dirname(dataPath), {recursive: true});
@@ -161,8 +145,6 @@ function devDataHandler() {
                                     tokens: tokenCount
                                 }
                             }));
-
-                            console.log('✅ [DEV] 用户词库保存成功');
                         } catch (error) {
                             console.error('❌ [DEV] 保存用户词库失败:', error);
                             res.statusCode = 500;
@@ -219,7 +201,6 @@ export default defineConfig({
                     fileName = fileName.split('?')[0];
 
                     const filePath = path.join(rootDir, '..', 'data_user', fileName);
-                    console.log('📁 [PROXY] 读取用户数据:', filePath)
 
                     if (fs.existsSync(filePath)) {
                         const data = fs.readFileSync(filePath, 'utf-8')
@@ -229,7 +210,6 @@ export default defineConfig({
                         return true
                     }
 
-                    console.log('❌ [PROXY] 文件不存在:', filePath)
                     return null
                 }
             },
@@ -246,7 +226,6 @@ export default defineConfig({
                     fileName = fileName.split('?')[0];
 
                     const filePath = path.join(rootDir, '..', 'data', fileName);
-                    console.log('📁 [PROXY] 读取系统数据:', filePath)
 
                     if (fs.existsSync(filePath)) {
                         const data = fs.readFileSync(filePath, 'utf-8')
@@ -256,7 +235,6 @@ export default defineConfig({
                         return true
                     }
 
-                    console.log('❌ [PROXY] 文件不存在:', filePath)
                     return null
                 }
             }

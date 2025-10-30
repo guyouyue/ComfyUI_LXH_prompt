@@ -12,7 +12,6 @@ export function useCategoryManagement() {
      * 打开分类编辑器
      */
     const openCategoryEditor = (categoryData, categoryType) => {
-        console.log('[CategoryManagement] 打开分类编辑器:', {categoryType, categoryData});
         store.openCategoryEditor(categoryData, categoryType);
     };
 
@@ -20,8 +19,6 @@ export function useCategoryManagement() {
      * 保存分类编辑
      */
     const saveCategoryEdit = async (saveData) => {
-        console.log('[CategoryManagement] 保存分类数据:', saveData);
-
         try {
             if (saveData.categoryType === 'category') {
                 return await saveCategoryData(saveData);
@@ -42,8 +39,6 @@ export function useCategoryManagement() {
      * 保存一级分类
      */
     const saveCategoryData = async (saveData) => {
-        console.log('[CategoryManagement] 保存一级分类:', saveData);
-
         // 查找目标分类
         let targetCategory = userTokens.value.find(cat => cat.id === saveData.id);
 
@@ -59,13 +54,11 @@ export function useCategoryManagement() {
                 updatedAt: Date.now()
             };
             userTokens.value.push(targetCategory);
-            console.log('[CategoryManagement] 新建一级分类:', targetCategory);
         } else {
             // 更新现有分类
             targetCategory.name = saveData.name;
             targetCategory.description = saveData.description;
             targetCategory.updatedAt = Date.now();
-            console.log('[CategoryManagement] 更新一级分类:', targetCategory);
         }
 
         // 保存到文件
@@ -82,8 +75,6 @@ export function useCategoryManagement() {
      * 保存二级分类
      */
     const saveSubcategoryData = async (saveData) => {
-        console.log('[CategoryManagement] 保存二级分类:', saveData);
-
         // ⭐ 关键：需要从 saveData 中获取父级分类信息
         const parentId = saveData.parentId || saveData.parentData?.id;
         if (!parentId) {
@@ -110,7 +101,6 @@ export function useCategoryManagement() {
                 updatedAt: Date.now()
             };
             userTokens.value.push(parentCategory);
-            console.log('[CategoryManagement] 创建父级分类:', parentCategory);
         }
 
         // 查找目标子分类
@@ -128,13 +118,11 @@ export function useCategoryManagement() {
                 updatedAt: Date.now()
             };
             parentCategory.subcategories.push(targetSubcategory);
-            console.log('[CategoryManagement] 新建二级分类:', targetSubcategory);
         } else {
             // 更新现有子分类
             targetSubcategory.name = saveData.name;
             targetSubcategory.description = saveData.description;
             targetSubcategory.updatedAt = Date.now();
-            console.log('[CategoryManagement] 更新二级分类:', targetSubcategory);
         }
 
         // 更新父级分类的更新时间
@@ -154,8 +142,6 @@ export function useCategoryManagement() {
      * 保存词元池分组
      */
     const savePoolGroupData = async (saveData) => {
-        console.log('[CategoryManagement] 保存词元池分组:', saveData);
-
         // 查找目标分组
         const targetGroup = customGroups.value.find(group => group.id === saveData.id);
 

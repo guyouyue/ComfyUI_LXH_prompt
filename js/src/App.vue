@@ -340,7 +340,6 @@ const handleEditConfirm = (index) => {
 };
 
 const handleEditCancel = (index) => {
-  console.log('[App.vue] 取消词元编辑，索引:', index);
   store.removeFinalToken(index);
 
   if (index > 0) {
@@ -403,12 +402,10 @@ const handleRemoveToken = (index) => {
 
 // ========== 词库操作 ==========
 const handlePoolTokenClick = (token) => {
-  console.log('[App] 词库词元被点击:', token);
   editorOps.handlePoolTokenClick(token);
 };
 
 const handlePoolTokenDoubleClick = (token) => {
-  console.log('[App] 词库词元被双击，插入到输出区:', token);
   insertToken(token);
 };
 
@@ -435,11 +432,6 @@ const insertToken = (token, isCustomGroup = false) => {
 };
 
 const handleAddNewToken = (category, subcategory) => {
-  console.log('[App] 添加新词元到分类:', {
-    category: category.name,
-    subcategory: subcategory.name,
-  });
-
   // 调用编辑器打开方法，传入预设的分类信息
   editorOps.openNewTokenEditor({
     categoryId: category.id,
@@ -496,12 +488,10 @@ const handleTokenSelected = (token) => {
 };
 // ========== 分类编辑操作 ==========
 const handleCategoryClick = (category) => {
-  console.log('[App] 一级分类被点击:', category);
   categoryMgmt.openCategoryEditor(category, 'category');
 };
 
 const handleSubcategoryClick = (data) => {
-  console.log('[App] 二级分类被点击:', data);
   const {category, subcategory} = data;
 
   // 添加父级信息
@@ -515,12 +505,10 @@ const handleSubcategoryClick = (data) => {
 };
 
 const handleGroupClick = (group) => {
-  console.log('[App] 词元池分组被点击:', group);
   categoryMgmt.openCategoryEditor(group, 'pool');
 };
 
 const handleCategorySave = async (saveData) => {
-  console.log('[App] 保存分类数据:', saveData);
   const success = await categoryMgmt.saveCategoryEdit(saveData);
 
   if (success) {
@@ -554,17 +542,12 @@ const handleConfirm = () => {
 
 // ⭐ 修改：添加确认对话框
 const handleCancel = async () => {
-  console.log('[App.vue] 准备关闭编辑器');
-
   const confirmed = await confirmDialog.confirm(
       '确定要关闭编辑器吗？未保存的更改将会丢失。'
   );
 
   if (confirmed) {
-    console.log('[App.vue] 用户确认关闭编辑器');
     emit('close', null);
-  } else {
-    console.log('[App.vue] 用户取消关闭');
   }
 };
 
@@ -580,16 +563,11 @@ const keyboard = useAppKeyboard(store, {
 
 // ========== 生命周期 ==========
 onMounted(async () => {
-  console.log('[App.vue] 开始初始化应用');
   document.addEventListener('keydown', keyboard.handleKeyDown);
 
   await initializeApp();
   isInitialized.value = true;
 
-  console.log('[App.vue] 初始化完成', {
-    tokenCategories: tokenCategories.value.length,
-    customGroups: customGroups.value.length,
-  });
 });
 
 onUnmounted(() => {

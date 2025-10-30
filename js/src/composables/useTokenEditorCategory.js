@@ -89,8 +89,6 @@ export function useTokenEditorCategory(props, state, emit) {
                     name: newCategoryName,
                     type: 'category',
                 });
-
-                console.log('[useTokenEditorCategory] 创建临时一级分类:', tempCategory);
             }
         }
 
@@ -123,8 +121,6 @@ export function useTokenEditorCategory(props, state, emit) {
                     parentId: state.formData.value.categoryId,
                     type: 'subcategory',
                 });
-
-                console.log('[useTokenEditorCategory] 创建临时二级分类:', tempSubcategory);
             }
         }
     };

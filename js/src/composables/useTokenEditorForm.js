@@ -77,13 +77,6 @@ export function useTokenEditorForm(props, state, category, pool, emit) {
 
       const rawTokens = poolData.tokens || [];
       state.poolTokens.value = pool.processPoolTokens(rawTokens);
-
-      console.log('[useTokenEditorForm] 词元池初始化完成:', {
-        groupId: state.formData.value.groupId,
-        poolId: state.formData.value.poolId,
-        rawCount: rawTokens.length,
-        processedCount: state.poolTokens.value.length,
-      });
     }
 
     setTimeout(() => {

@@ -347,9 +347,6 @@
     import { createApp } from 'vue';
     import App from './src/App.vue';
 
-    console.log('%c🚀 LXH Prompt 开发环境已启动', 'color: #667eea; font-size: 16px; font-weight: bold;');
-    console.log('%c使用 Ctrl+E 快速打开编辑器', 'color: #888; font-size: 12px;');
-
     let currentApp = null;
 
     // 打开编辑器
@@ -357,13 +354,10 @@
       const input = document.getElementById('testInput');
       const initialText = input.value.trim();
 
-      console.log('📝 打开编辑器，初始文本:', initialText);
-
       // 清理旧实例
       if (currentApp) {
         try {
           currentApp.unmount();
-          console.log('🗑️ 已清理旧实例');
         } catch (e) {
           console.warn('清理旧实例时出错:', e);
         }
@@ -381,11 +375,7 @@
       currentApp = createApp(App, {
         initialText: initialText,
         onClose: (result) => {
-          console.log('✅ 编辑器关闭');
-
           if (result !== null) {
-            console.log('📤 返回结果:', result);
-
             // 显示输出面板
             const outputPanel = document.getElementById('outputPanel');
             const outputText = document.getElementById('outputText');
@@ -398,7 +388,6 @@
             // 添加成功提示
             showToast('✅ 已更新提示词');
           } else {
-            console.log('❌ 用户取消');
             showToast('❌ 已取消编辑');
           }
 
@@ -416,7 +405,6 @@
       });
 
       currentApp.mount(container);
-      console.log('✅ 编辑器已挂载');
     };
 
     // 切换侧边栏
@@ -527,8 +515,6 @@
       }
     `;
     document.head.appendChild(style);
-
-    console.log('✅ 开发环境初始化完成');
   </script>
 </body>
 </html>

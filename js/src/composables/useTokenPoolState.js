@@ -55,8 +55,6 @@ export function useTokenPoolState() {
         });
       }
     }
-
-    console.log('[TokenPoolState] 切换系统词库分类:', categoryId, '状态:', !isCurrentlyExpanded ? '展开' : '收起');
   };
 
   /**
@@ -98,8 +96,6 @@ export function useTokenPoolState() {
       // 收起时，同时收起所有子分组
       expandedCustomGroups.value.clear();
     }
-
-    console.log('[TokenPoolState] 切换自定义词元池，状态:', willExpand ? '展开' : '收起');
   };
 
   /**
@@ -117,8 +113,6 @@ export function useTokenPoolState() {
    * 搜索时自动展开所有匹配项
    */
   const expandSearchResults = (filteredCategories, filteredCustomGroups) => {
-    console.log('[TokenPoolState] 展开搜索结果');
-
     // 展开匹配的自定义词元池
     if (filteredCustomGroups.length > 0) {
       isCustomPoolExpanded.value = true;
@@ -145,7 +139,6 @@ export function useTokenPoolState() {
    * 清除搜索时收起所有
    */
   const collapseAll = () => {
-    console.log('[TokenPoolState] 收起所有分类');
     isCustomPoolExpanded.value = false;
     expandedCustomGroups.value.clear();
     expandedCategories.value.clear();

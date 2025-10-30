@@ -23,12 +23,6 @@ export function useTokenPoolOperations(emit, categories, language) {
             if (categoryId) break;
         }
 
-        console.log('[TokenPoolOps] 单击词元，打开编辑器:', {
-            token,
-            categoryId,
-            subcategoryId,
-        });
-
         emit('token-click', {
             ...token,
             categoryId,
@@ -40,7 +34,6 @@ export function useTokenPoolOperations(emit, categories, language) {
      * 处理词元双击（插入到输出区）
      */
     const handleTokenDoubleClick = (token) => {
-        console.log('[TokenPoolOps] 双击词元，插入到输出区:', token);
         emit('token-dblclick', token);
     };
 
@@ -48,7 +41,6 @@ export function useTokenPoolOperations(emit, categories, language) {
      * 处理词元池项目单击（打开编辑器）
      */
     const handlePoolItemClick = (poolItem) => {
-        console.log('[TokenPoolOps] 单击词元池项目，打开编辑器:', poolItem);
         emit('pool-item-click', poolItem);
     };
 
@@ -56,7 +48,6 @@ export function useTokenPoolOperations(emit, categories, language) {
      * 处理词元池项目双击（插入到输出区）
      */
     const handlePoolItemDoubleClick = (poolItem) => {
-        console.log('[TokenPoolOps] 双击词元池项目，插入到输出区:', poolItem);
         emit('use-pool-item', poolItem);
     };
 

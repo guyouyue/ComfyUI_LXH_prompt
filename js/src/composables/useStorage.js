@@ -35,7 +35,6 @@ export function useStorage() {
   const saveToStorage = (key, value) => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-      console.log(`[useStorage] 保存成功 (${key})`);
       return true;
     } catch (error) {
       console.error(`[useStorage] 保存失败 (${key}):`, error);
@@ -51,7 +50,6 @@ export function useStorage() {
   const removeFromStorage = (key) => {
     try {
       localStorage.removeItem(key);
-      console.log(`[useStorage] 删除成功 (${key})`);
       return true;
     } catch (error) {
       console.error(`[useStorage] 删除失败 (${key}):`, error);
@@ -68,7 +66,6 @@ export function useStorage() {
       Object.values(STORAGE_KEYS).forEach(key => {
         localStorage.removeItem(key);
       });
-      console.log('[useStorage] 清空所有存储');
       return true;
     } catch (error) {
       console.error('[useStorage] 清空失败:', error);
@@ -82,7 +79,6 @@ export function useStorage() {
   const loadPreferences = () => {
     const stored = loadFromStorage(STORAGE_KEYS.PREFERENCES, DEFAULT_CONFIG);
     preferences.value = { ...DEFAULT_CONFIG, ...stored };
-    console.log('[useStorage] 加载偏好设置:', preferences.value);
   };
 
   /**
@@ -99,7 +95,6 @@ export function useStorage() {
   const updatePreferences = (updates) => {
     preferences.value = { ...preferences.value, ...updates };
     savePreferences();
-    console.log('[useStorage] 更新偏好设置:', updates);
   };
 
   /**
@@ -111,7 +106,6 @@ export function useStorage() {
     Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
       data[name] = loadFromStorage(key);
     });
-    console.log('[useStorage] 导出数据:', data);
     return data;
   };
 
@@ -127,7 +121,6 @@ export function useStorage() {
           saveToStorage(key, data[name]);
         }
       });
-      console.log('[useStorage] 导入数据成功');
       return true;
     } catch (error) {
       console.error('[useStorage] 导入数据失败:', error);

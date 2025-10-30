@@ -58,12 +58,9 @@ export function useEditorOperations() {
         }
 
         store.openEditor(tokenWithCategory, type);
-        console.log('[EditorOperations] 打开编辑器:', type, tokenWithCategory);
     };
 
     const openNewTokenEditor = (presetData = null) => {
-        console.log('[EditorOperations] 打开新建词元编辑器，预设数据:', presetData);
-
         const newToken = {
             id: `user_${Date.now()}`,
             zh: '',
@@ -88,18 +85,10 @@ export function useEditorOperations() {
             const subcategoryDisplay = typeof presetData.subcategoryName === 'string'
                 ? presetData.subcategoryName
                 : presetData.subcategoryName?.zh || presetData.subcategoryId;
-
-            console.log(`[EditorOperations] 预设分类: ${categoryDisplay} / ${subcategoryDisplay}`);
         }
     };
 
     const refreshEditingToken = (tokenId, categoryId, subcategoryId) => {
-        console.log('[EditorOperations] 刷新编辑器词元数据:', {
-            tokenId,
-            categoryId,
-            subcategoryId,
-        });
-
         try {
             const category = tokenCategories.value.find(cat => cat.id === categoryId);
             if (!category) {
@@ -126,16 +115,12 @@ export function useEditorOperations() {
                 categoryName: category.name,
                 subcategoryName: subcategory.name,
             });
-
-            console.log('[EditorOperations] 编辑器词元数据已刷新');
         } catch (error) {
             console.error('[EditorOperations] 刷新编辑器词元数据失败:', error);
         }
     };
 
     const refreshEditingPoolToken = (poolKey) => {
-        console.log('[EditorOperations] 刷新词元池编辑器数据:', poolKey);
-
         try {
             const updatedPool = customGroups.value.find(
                 group => group.key === poolKey || group.id === poolKey
@@ -151,16 +136,12 @@ export function useEditorOperations() {
                 name: updatedPool.name,
                 description: updatedPool.description,
             });
-
-            console.log('[EditorOperations] 词元池编辑器数据已刷新');
         } catch (error) {
             console.error('[EditorOperations] 刷新词元池编辑器数据失败:', error);
         }
     };
 
     const handleTokenSave = async (saveData) => {
-        console.log('[EditorOperations] 保存词元数据:', saveData);
-
         try {
             let result = {success: false};
             let newTokenId = null;
@@ -175,8 +156,6 @@ export function useEditorOperations() {
             }
 
             if (result.success) {
-                console.log('[EditorOperations] 保存成功，刷新编辑器数据');
-
                 if (saveData.tokenType === 'single' && store.editingToken.value) {
                     refreshEditingToken(saveData.id, saveData.categoryId, saveData.subcategoryId);
                 } else if (saveData.tokenType === 'unmapped') {
@@ -206,8 +185,6 @@ export function useEditorOperations() {
      * ⭐ 修复：双击输出区词元编辑
      */
     const handleTokenEdit = (token) => {
-        console.log('[EditorOperations] 编辑词元:', token);
-
         // 1. 词元池类型
         if (token.isCustomPool) {
             // ⭐ 修复：遍历所有分组的 pool 数组查找词元池项目
@@ -231,11 +208,6 @@ export function useEditorOperations() {
                 if (found) {
                     fullPoolData = found;
                     parentGroup = group;
-                    console.log('[EditorOperations] 找到词元池:', {
-                        poolId: found.id,
-                        groupId: group.id,
-                        groupName: group.name,
-                    });
                     break;
                 }
             }
@@ -266,7 +238,6 @@ export function useEditorOperations() {
     };
 
     const handlePoolTokenClick = (token) => {
-        console.log('[EditorOperations] 词库词元被点击:', token);
         openTokenEditor(token, 'single');
     };
 
@@ -274,8 +245,6 @@ export function useEditorOperations() {
      * ⭐ 修复：点击词元池项目打开编辑器
      */
     const handlePoolItemClick = (poolItem) => {
-        console.log('[EditorOperations] 词元池项目被点击:', poolItem);
-
         // 查找所属分组
         let parentGroup = null;
         for (const group of customGroups.value) {

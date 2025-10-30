@@ -9,7 +9,6 @@ export function useCursor() {
 
     const setCursor = (area, index = null) => {
         cursorPosition.value = {area, index};
-        console.log('[useCursor] 光标位置更新:', cursorPosition.value);
     };
 
     const clearCursor = () => {

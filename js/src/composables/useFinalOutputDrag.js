@@ -95,7 +95,6 @@ export function useFinalOutputDrag(emit) {
      */
     const startDrag = (area, index) => {
         isDragging.value = true;
-        console.log(`[Drag] 开始拖拽: area=${area}, index=${index}`);
 
         document.addEventListener('mousemove', handleGlobalMouseMove);
         document.addEventListener('mouseup', handleGlobalMouseUp);
@@ -167,7 +166,6 @@ export function useFinalOutputDrag(emit) {
         const targetIndex = dropTargetIndex.value;
 
         if (sourceIndex !== targetIndex && targetIndex !== -1) {
-            console.log(`[Drag] 移动词元: ${sourceIndex} → ${targetIndex}`);
             emit('reorder-tokens', {from: sourceIndex, to: targetIndex});
         }
 

@@ -132,13 +132,11 @@ const handleToggleCustomPoolCategory = () => {
 // ========== 监听搜索状态 ==========
 watch(isSearching, (newValue) => {
   if (newValue) {
-    console.log('[TokenPoolSection] 开始搜索');
     state.expandSearchResults(
         filteredCategories.value,
         filteredCustomGroups.value
     );
   } else {
-    console.log('[TokenPoolSection] 清除搜索');
     state.collapseAll();
   }
 });

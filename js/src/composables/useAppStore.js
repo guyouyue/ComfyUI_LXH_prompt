@@ -116,8 +116,6 @@ export function useAppStore() {
         state.editingCategory.value = null;
         state.editingCategoryType.value = null;
         state.showCategoryEditor.value = false;
-
-        console.log('[AppStore] 打开词元编辑器:', {type, token});
     };
 
     const closeEditor = () => {
@@ -170,8 +168,6 @@ export function useAppStore() {
         // ⭐ 清空词元编辑器状态
         state.editingToken.value = null;
         state.editingTokenType.value = null;
-
-        console.log('[AppStore] 打开分类编辑器:', {categoryType, categoryData});
     };
 
     const closeCategoryEditor = () => {
@@ -179,7 +175,6 @@ export function useAppStore() {
         state.editingCategoryType.value = null;
         state.showCategoryEditor.value = false;
         state.showEditor.value = false;
-        console.log('[AppStore] 关闭分类编辑器');
     };
 
     // ========== 返回接口 ==========

@@ -9,13 +9,6 @@ export function useTokenPoolSearch(categories, customGroups) {
     });
 
     const filteredCategories = computed(() => {
-        // ⭐ 添加调试
-        console.log('[useTokenPoolSearch] 计算 filteredCategories:', {
-            categoriesValue: categories.value,
-            categoriesLength: categories.value?.length,
-            searchQuery: searchQuery.value,
-        });
-
         if (!searchQuery.value.trim() || !categories.value) {
             return categories.value || [];
         }
@@ -32,19 +25,10 @@ export function useTokenPoolSearch(categories, customGroups) {
 
             return {...cat, subcategories: filteredSubs};
         }).filter(cat => cat.subcategories.length > 0);
-
-        console.log('[useTokenPoolSearch] filteredCategories 结果:', result);
         return result;
     });
 
     const filteredCustomGroups = computed(() => {
-        // ⭐ 添加调试
-        console.log('[useTokenPoolSearch] 计算 filteredCustomGroups:', {
-            customGroupsValue: customGroups.value,
-            customGroupsLength: customGroups.value?.length,
-            isSearching: isSearching.value,
-        });
-
         if (!customGroups.value || !isSearching.value) {
             return customGroups.value || [];
         }
@@ -65,8 +49,6 @@ export function useTokenPoolSearch(categories, customGroups) {
                 pool: filteredPool,
             };
         }).filter(group => group.pool.length > 0);
-
-        console.log('[useTokenPoolSearch] filteredCustomGroups 结果:', result);
         return result;
     });
 

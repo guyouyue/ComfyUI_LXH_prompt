@@ -29,23 +29,15 @@ export function useTokens() {
     const loadTokenData = async () => {
         // ⭐ 避免重复加载
         if (isInitialized) {
-            console.log('[useTokens] 已初始化，跳过重复加载');
             return true;
         }
 
         try {
-            console.log('[useTokens] 开始加载词库数据');
-
             // 同时加载系统词库和用户词库
             const [systemData, userData] = await Promise.allSettled([
                 loadSystemTokens(),
                 loadUserTokens()
             ]);
-
-            console.log('[useTokens] 词库加载完成:', {
-                system: systemData.status,
-                user: userData.status
-            });
 
             // 合并词库数据，用户词库优先
             await mergeTokenData(
@@ -55,7 +47,6 @@ export function useTokens() {
 
             // ⭐ 标记已初始化
             isInitialized = true;
-            console.log('[useTokens] 词库合并完成，共', tokenCategories.value.length, '个分类');
 
             return true;
         } catch (error) {
@@ -74,10 +65,8 @@ export function useTokens() {
     const loadSystemTokens = async () => {
         try {
             const dataPath = getDataPath('data.json');
-            console.log('[useTokens] 加载系统词库:', dataPath);
 
             const data = await loadLocalFile(dataPath);
-            console.log('[useTokens] 系统词库加载成功，共', data.categories?.length || 0, '个分类');
 
             // 处理系统词元，添加唯一标识
             const processedTokens = processSystemTokens(data.categories || []);
@@ -115,13 +104,11 @@ export function useTokens() {
     const loadUserTokens = async () => {
         try {
             const userDataPath = getUserDataPath('data.json');
-            console.log('[useTokens] 加载用户词库:', userDataPath);
 
             const response = await fetch(userDataPath);
             if (response.ok) {
                 const data = await response.json();
                 const userTokensData = data.categories || [];
-                console.log('[useTokens] 用户词库加载成功:', userTokensData.length, '个分类');
 
                 // 处理用户词元，添加唯一标识
                 const processedTokens = processUserTokens(userTokensData);
@@ -159,11 +146,6 @@ export function useTokens() {
 
     // 合并词库数据（用户词库优先）
     const mergeTokenData = async (systemCategories, userCategories) => {
-        console.log('[useTokens] 开始合并词库数据', {
-            system: systemCategories.length,
-            user: userCategories.length
-        });
-
         // 创建用户词元映射表（用于快速查找和覆盖）
         const userTokenMap = new Map();
         userCategories.forEach(category => {
@@ -180,8 +162,6 @@ export function useTokens() {
                 });
             });
         });
-
-        console.log('[useTokens] 用户词元映射表大小:', userTokenMap.size);
 
         // 合并分类结构
         const mergedCategories = [];
@@ -259,8 +239,6 @@ export function useTokens() {
                 expanded: false
             }))
         }));
-
-        console.log('[useTokens] 合并完成，最终分类数:', tokenCategories.value.length);
     };
 
     // 添加新词元到用户词库
@@ -277,7 +255,6 @@ export function useTokens() {
         userTokens.value = await addTokenToUserData(category, subcategory, newToken);
         await mergeTokenData(systemTokens.value, userTokens.value);
 
-        console.log('[useTokens] 添加新词元到用户词库:', newToken);
         return newToken;
     };
 
@@ -346,7 +323,6 @@ export function useTokens() {
                 const response = await fetch(userDataPath);
                 if (response.ok) {
                     existingData = await response.json();
-                    console.log('📖 读取现有数据，分类数:', existingData.categories?.length || 0);
                 }
             } catch (error) {
                 console.warn('⚠️ 读取现有数据失败，使用空数据:', error);
@@ -354,12 +330,9 @@ export function useTokens() {
 
             let newCategories;
             if (userData?.categories) {
-                console.log('📝 使用传入的 userData，分类数:', userData.categories.length);
                 newCategories = cleanUserTokens(userData.categories);
-                console.log('🧹 清洗后的分类数:', newCategories.length);
             } else {
                 newCategories = cleanUserTokens(userTokens.value);
-                console.log('🧹 使用清洗后的 userTokens，分类数:', newCategories.length);
             }
 
             const mergedCategories = mergeCategories(existingData.categories || [], newCategories);
@@ -369,18 +342,10 @@ export function useTokens() {
                 updatedAt: Date.now()
             };
 
-            console.log('📊 合并结果:', {
-                existing: existingData.categories?.length || 0,
-                new: newCategories.length,
-                merged: mergedCategories.length
-            });
-
             const tokensCount = dataToSave.categories?.reduce((sum, cat) =>
                 sum + cat.subcategories.reduce((s, sub) => s + sub.tokens.length, 0), 0) || 0;
-            console.log('💾 词元总数:', tokensCount);
 
             const savePath = getSaveUserTokensPath();
-            console.log('💾 保存路径:', savePath);
 
             const response = await fetch(savePath, {
                 method: 'POST',
@@ -392,13 +357,11 @@ export function useTokens() {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ 保存成功:', result);
                 console.groupEnd();
 
                 userTokens.value = processUserTokens(mergedCategories);
                 await mergeTokenData(systemTokens.value, userTokens.value);
 
-                console.log('✅ 内存数据已同步更新');
                 return true;
             } else {
                 const errorText = await response.text();
@@ -414,8 +377,6 @@ export function useTokens() {
     };
 
     const cleanUserTokens = (categories) => {
-        console.log('[cleanUserTokens] 开始清洗用户词元数据');
-
         if (!categories || categories.length === 0) {
             return [];
         }
@@ -465,28 +426,14 @@ export function useTokens() {
                 };
             });
 
-        console.log('[cleanUserTokens] 清洗完成:', {
-            original: categories.length,
-            cleaned: cleanedCategories.length,
-            categories: cleanedCategories.map(c => ({
-                id: c.id,
-                subcategories: c.subcategories.length,
-                tokens: c.subcategories.reduce((s, sub) => s + sub.tokens.length, 0)
-            }))
-        });
-
         return cleanedCategories;
     };
 
     const refreshMergedData = async () => {
-        console.log('[useTokens] 🔄 刷新合并数据（不重新加载文件）');
         await mergeTokenData(systemTokens.value, userTokens.value);
-        console.log('[useTokens] ✅ 合并数据已刷新');
     };
 
     const mergeCategories = (existingCategories, newCategories) => {
-        console.log('[mergeCategories] 开始合并分类数据');
-
         const categoryMap = new Map();
         existingCategories.forEach(cat => {
             categoryMap.set(cat.id, {...cat});
@@ -578,20 +525,12 @@ export function useTokens() {
     };
 
     const saveUserTokenData = async () => {
-        console.log('[useTokens] 🔄 准备保存用户词元数据');
-
         const dataToSave = {
             categories: userTokens.value,
             updatedAt: Date.now()
         };
 
         const result = await saveUserTokens(dataToSave);
-
-        if (result) {
-            console.log('[useTokens] ✅ 用户词元数据保存成功');
-        } else {
-            console.error('[useTokens] ❌ 用户词元数据保存失败');
-        }
 
         return result;
     };
@@ -623,8 +562,6 @@ export function useTokens() {
 
     const updateUserToken = async (tokenId, updates) => {
         try {
-            console.log('[updateUserToken] 开始更新词元:', {tokenId, updates});
-
             for (const category of userTokens.value) {
                 for (const subcategory of category.subcategories) {
                     const tokenIndex = subcategory.tokens.findIndex(token => token.id === tokenId);
@@ -634,8 +571,6 @@ export function useTokens() {
                             ...updates,
                             updatedAt: Date.now()
                         };
-
-                        console.log('[updateUserToken] 词元已更新:', subcategory.tokens[tokenIndex]);
 
                         await saveUserTokens({
                             categories: userTokens.value
@@ -656,12 +591,6 @@ export function useTokens() {
 
     const addUserToken = async (tokenData, category, subcategory) => {
         try {
-            console.log('[addUserToken] 开始添加词元:', {
-                tokenId: tokenData.id,
-                categoryId: category.id,
-                subcategoryId: subcategory.id
-            });
-
             let userCategory = userTokens.value.find(cat => cat.id === category.id);
             if (!userCategory) {
                 userCategory = {
@@ -674,7 +603,6 @@ export function useTokens() {
                     updatedAt: Date.now()
                 };
                 userTokens.value.push(userCategory);
-                console.log('[addUserToken] 创建新的用户分类:', userCategory.id);
             }
 
             let userSubcategory = userCategory.subcategories.find(sub => sub.id === subcategory.id);
@@ -689,12 +617,10 @@ export function useTokens() {
                     updatedAt: Date.now()
                 };
                 userCategory.subcategories.push(userSubcategory);
-                console.log('[addUserToken] 创建新的用户子分类:', userSubcategory.id);
             }
 
             const existingIndex = userSubcategory.tokens.findIndex(token => token.id === tokenData.id);
             if (existingIndex !== -1) {
-                console.log('[addUserToken] 更新现有词元:', tokenData.id);
                 userSubcategory.tokens[existingIndex] = {
                     ...userSubcategory.tokens[existingIndex],
                     ...tokenData,
@@ -702,7 +628,6 @@ export function useTokens() {
                     updatedAt: Date.now()
                 };
             } else {
-                console.log('[addUserToken] 添加新词元:', tokenData.id);
                 userSubcategory.tokens.push({
                     ...tokenData,
                     categoryId: category.id,
@@ -717,13 +642,6 @@ export function useTokens() {
                 categories: userTokens.value
             });
 
-            console.log('[addUserToken] 词元添加成功，当前用户词库状态:', {
-                categories: userTokens.value.length,
-                subcategories: userTokens.value.reduce((sum, cat) => sum + cat.subcategories.length, 0),
-                tokens: userTokens.value.reduce((sum, cat) =>
-                    sum + cat.subcategories.reduce((s, sub) => s + sub.tokens.length, 0), 0)
-            });
-
             return true;
         } catch (error) {
             console.error('[useTokens] 添加用户词元失败:', error);
@@ -732,7 +650,6 @@ export function useTokens() {
     };
 
     const reloadData = async () => {
-        console.log('[useTokens] 🔄 重新加载数据...');
         tokenCategories.value = [];
         systemTokens.value = [];
         userTokens.value = [];

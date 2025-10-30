@@ -10,12 +10,10 @@
 export function getBasePath() {
     // 开发环境（Vite dev server）
     if (import.meta.env.DEV) {
-        console.log('[PathHelper] 🔧 开发环境 - 直接使用本地文件');
         return ''; // 开发环境直接访问根路径
     }
 
     // 生产环境（ComfyUI）
-    console.log('[PathHelper] 📦 生产环境 - 使用API接口');
     return '';
 }
 
@@ -81,20 +79,4 @@ export function getRootPath() {
         return '/';
     }
     return '/extensions/ComfyUI_LXH_prompt/';
-}
-
-/**
- * 打印当前环境信息
- */
-export function printEnvInfo() {
-    console.group('🌍 [PathHelper] 环境信息');
-    console.log('模式:', import.meta.env.MODE);
-    console.log('开发环境:', import.meta.env.DEV);
-    console.log('生产环境:', import.meta.env.PROD);
-    console.log('基础路径:', getBasePath());
-    console.log('数据文件路径示例:', getDataPath('data.json'));
-    console.log('用户文件路径示例:', getUserDataPath('group.json'));
-    console.log('保存词库路径:', getSaveUserTokensPath());
-    console.log('保存用户数据路径:', getSaveUserDataPath());
-    console.groupEnd();
 }

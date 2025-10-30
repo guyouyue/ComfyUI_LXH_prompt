@@ -3,8 +3,6 @@ import { app } from "../../scripts/app.js";
 import { createApp } from "vue";
 import ModalComponent from "./src/App.vue";
 
-console.log("[LXH Prompt] 🚀 扩展脚本开始加载");
-
 // 开发模式检测
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -23,12 +21,7 @@ async function checkVersion() {
       const version = await response.json();
       if (currentVersion === null) {
         currentVersion = version.timestamp;
-        console.log('[LXH Prompt] 📌 当前版本:', version.buildTime);
       } else if (currentVersion !== version.timestamp) {
-        console.log('[LXH Prompt] 🔄 检测到新版本，准备刷新...');
-        console.log('  旧版本:', new Date(currentVersion).toLocaleString('zh-CN'));
-        console.log('  新版本:', version.buildTime);
-
         // 显示提示
         const shouldReload = confirm('🔄 检测到代码更新！\n\n点击"确定"刷新页面加载最新版本\n点击"取消"继续使用当前版本');
         if (shouldReload) {
@@ -55,14 +48,7 @@ function loadCSS() {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = cssPath;
-  link.onload = () => {
-    console.log("[LXH Prompt] ✅ CSS 加载成功");
-  };
-  link.onerror = () => {
-    console.error("[LXH Prompt] ❌ CSS 加载失败");
-  };
   document.head.appendChild(link);
-  console.log("[LXH Prompt] 正在加载 CSS:", cssPath);
 }
 
 // 立即加载 CSS
@@ -74,8 +60,6 @@ app.registerExtension({
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
     if (nodeData.name === "lxh_prompt") {
-      console.log("[LXH Prompt] ✅ 注册节点");
-
       const original_onNodeCreated = nodeType.prototype.onNodeCreated;
 
       nodeType.prototype.onNodeCreated = function () {
@@ -88,8 +72,6 @@ app.registerExtension({
 
           textWidget.mouse = function (event, pos, node) {
             if (event.type === "dblclick") {
-              console.log("[LXH Prompt] 🎯 双击打开编辑器");
-
               try {
                 showModal(textWidget.value, (newValue) => {
                   if (newValue !== null) {
@@ -129,8 +111,6 @@ app.registerExtension({
 
 // 显示弹窗
 function showModal(initialText, callback) {
-  console.log("[LXH Prompt] 🎬 显示编辑器");
-
   try {
     // 清理旧容器
     let container = document.getElementById("lxh-modal-container");
@@ -146,7 +126,6 @@ function showModal(initialText, callback) {
     const vueApp = createApp(ModalComponent, {
       initialText: initialText || '',
       onClose: (newValue) => {
-        console.log("[LXH Prompt] 📝 编辑完成");
         callback(newValue);
 
         setTimeout(() => {
@@ -163,12 +142,8 @@ function showModal(initialText, callback) {
     });
 
     vueApp.mount(container);
-    console.log("[LXH Prompt] ✅ 编辑器已打开");
 
   } catch (error) {
     console.error("[LXH Prompt] ❌ 打开编辑器失败:", error);
   }
 }
-
-console.log("[LXH Prompt] ✅ 扩展加载完成");
-console.log(isDev ? "[LXH Prompt] 🔧 开发模式 - 已启用自动更新检测" : "[LXH Prompt] 📦 生产模式");

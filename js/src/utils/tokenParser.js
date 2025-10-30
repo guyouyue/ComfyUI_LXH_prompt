@@ -34,7 +34,6 @@ export function parseTextToTokens(text, tokenCategories, customGroups = [], mode
         const poolPlaceholderMatch = part.match(/^{#%(.+?)#%}$/);
         if (poolPlaceholderMatch) {
             const poolKey = poolPlaceholderMatch[1];
-            console.log(`[parseTextToTokens] 检测到词元池占位符: ${part}, key: ${poolKey}`);
 
             // ⭐ 修正：在所有分组的 pool 数组中查找对应的词元池
             let parentGroup = null;
@@ -54,10 +53,6 @@ export function parseTextToTokens(text, tokenCategories, customGroups = [], mode
             }
 
             if (poolItem) {
-                console.log(`[parseTextToTokens] 找到对应的词元池:`, {
-                    poolItem,
-                    parentGroup: parentGroup.name
-                });
 
                 return {
                     id: `pool_placeholder_${poolKey}_${index}`,
@@ -75,15 +70,6 @@ export function parseTextToTokens(text, tokenCategories, customGroups = [], mode
                 };
             } else {
                 console.warn(`[parseTextToTokens] 未找到词元池占位符对应的词元池: ${part}`);
-                console.log('[parseTextToTokens] 当前 customGroups 结构:',
-                    customGroups.map(g => ({
-                        id: g.id,
-                        key: g.key,
-                        poolCount: g.pool?.length || 0,
-                        poolKeys: g.pool?.map(p => p.key || p.id) || []
-                    }))
-                );
-                // 如果没有找到对应的词元池，则作为未映射处理
             }
         }
 

@@ -69,13 +69,9 @@ export function useTokenManagement() {
      * 同步单个词元到输出区
      */
     const syncOutputTokens = (updatedTokenData) => {
-        console.log('[TokenManagement] 开始同步输出区词元:', updatedTokenData);
-
         store.finalTokens.value.forEach((token, index) => {
             // 1. 已映射词元：通过 ID 匹配
             if (token.mapping && token.mapping.id === updatedTokenData.id) {
-                console.log(`[TokenManagement] 更新已映射词元 #${index}`);
-
                 // 更新映射数据
                 token.mapping = {
                     ...token.mapping,
@@ -108,8 +104,6 @@ export function useTokenManagement() {
                             token.original.toLowerCase() === updatedTokenData.zh?.toLowerCase()));
 
                 if (isMatch) {
-                    console.log(`[TokenManagement] 未映射词元变为已映射 #${index}`);
-
                     // 更新为已映射词元
                     token.mapping = {
                         id: updatedTokenData.id,
@@ -131,19 +125,14 @@ export function useTokenManagement() {
                 }
             }
         });
-
-        console.log('[TokenManagement] 输出区词元同步完成');
     };
 
     /**
      * 同步词元池到输出区
      */
     const syncPoolTokensInOutput = (poolKey, updatedPoolData) => {
-        console.log('[TokenManagement] 同步词元池到输出区:', poolKey);
-
         store.finalTokens.value.forEach((token, index) => {
             if (token.isCustomPool && token.poolKey === poolKey) {
-                console.log(`[TokenManagement] 更新词元池 #${index}`);
 
                 token.poolData = {
                     ...token.poolData,
@@ -158,16 +147,12 @@ export function useTokenManagement() {
                         : updatedPoolData.name.en;
             }
         });
-
-        console.log('[TokenManagement] 词元池同步完成');
     };
 
     /**
      * 同步所有输出区词元
      */
     const syncAllOutputTokens = () => {
-        console.log('[TokenManagement] 同步所有输出区词元');
-
         store.finalTokens.value.forEach((token, index) => {
             if (token.mapping && token.mapping.id) {
                 const updatedToken = allTokensFlat.value.find(
@@ -175,8 +160,6 @@ export function useTokenManagement() {
                 );
 
                 if (updatedToken) {
-                    console.log(`[TokenManagement] 同步词元 #${index}`);
-
                     token.mapping = {...updatedToken};
                     token.display =
                         store.outputLanguage.value === LANGUAGES.ZH
@@ -185,8 +168,6 @@ export function useTokenManagement() {
                 }
             }
         });
-
-        console.log('[TokenManagement] 所有词元同步完成');
     };
 
     // ========== 分类管理 ==========
@@ -196,11 +177,6 @@ export function useTokenManagement() {
      */
     const createTempCategories = async (tempCategories = [], tempSubcategories = []) => {
         try {
-            console.log('[TokenManagement] 创建临时分类:', {
-                categories: tempCategories.length,
-                subcategories: tempSubcategories.length,
-            });
-
             // 1. 处理一级分类
             for (const tempCat of tempCategories) {
                 let existingCategory = userTokens.value.find(cat => cat.id === tempCat.id);
@@ -215,7 +191,6 @@ export function useTokenManagement() {
                     };
                     userTokens.value.push(newCategory);
                     existingCategory = newCategory;
-                    console.log('[TokenManagement] 创建一级分类:', newCategory);
                 }
 
                 // 挂载子分类
@@ -234,7 +209,6 @@ export function useTokenManagement() {
                             createdAt: Date.now(),
                             updatedAt: Date.now(),
                         });
-                        console.log('[TokenManagement] 创建二级分类:', tempSub);
                     }
                 }
             }
@@ -257,7 +231,6 @@ export function useTokenManagement() {
                         updatedAt: Date.now(),
                     };
                     userTokens.value.push(parent);
-                    console.log('[TokenManagement] 兜底创建父级分类:', parent);
                 }
 
                 const exists = parent.subcategories.find(s => s.id === tempSub.id);
@@ -271,14 +244,11 @@ export function useTokenManagement() {
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
                     });
-                    console.log('[TokenManagement] 创建孤立二级分类:', tempSub);
                 }
             }
 
             // 刷新合并数据
             await refreshMergedData();
-
-            console.log('[TokenManagement] 临时分类创建完成');
             return true;
         } catch (error) {
             console.error('[TokenManagement] 创建临时分类失败:', error);
@@ -291,10 +261,6 @@ export function useTokenManagement() {
      */
     const autoCreateMissingCategory = async (categoryId, subcategoryId) => {
         try {
-            console.log('[TokenManagement] 自动创建缺失的分类:', {
-                categoryId,
-                subcategoryId,
-            });
 
             // 查找系统词库中的分类信息
             let systemCategory = null;
@@ -394,7 +360,6 @@ export function useTokenManagement() {
                     };
                     userTokens.value.push(newCategory);
                     userCategory = newCategory;
-                    console.log('[TokenManagement] 创建一级分类:', newCategory);
                 }
 
                 for (const subData of subcategoriesToCreate) {
@@ -409,12 +374,10 @@ export function useTokenManagement() {
 
                     if (userCategory) {
                         userCategory.subcategories.push(newSubcategory);
-                        console.log('[TokenManagement] 创建二级分类:', newSubcategory);
                     }
                 }
 
                 await saveUserTokens();
-                console.log('[TokenManagement] 分类创建完成');
                 return true;
             }
 
@@ -471,8 +434,6 @@ export function useTokenManagement() {
      * 保存单个词元
      */
     const saveSingleToken = async (saveData) => {
-        console.log('[TokenManagement] 保存单个词元:', saveData);
-
         try {
             // 创建临时分类
             if (saveData.tempCategories?.length > 0) {
@@ -536,8 +497,6 @@ export function useTokenManagement() {
                 if (!success) {
                     throw new Error('添加用户词元失败');
                 }
-
-                console.log('[TokenManagement] 系统词元已保存为用户副本');
                 syncOutputTokens(newTokenData);
             } else {
                 // 用户词元更新
@@ -563,7 +522,6 @@ export function useTokenManagement() {
                         oldSubcategoryId !== saveData.subcategoryId
                     ) {
                         // 转移分类
-                        console.log('[TokenManagement] 转移词元分类');
                         await removeTokenFromCategory(saveData.id, oldCategoryId, oldSubcategoryId);
 
                         const success = await addUserToken(
@@ -608,8 +566,6 @@ export function useTokenManagement() {
      * 保存未映射词元
      */
     const saveUnmappedToken = async (saveData) => {
-        console.log('[TokenManagement] 保存未映射词元:', saveData);
-
         try {
             if (saveData.tempCategories?.length > 0) {
                 const created = await createTempCategories(
@@ -672,7 +628,6 @@ export function useTokenManagement() {
             };
 
             await addUserToken(newTokenData, targetCategory, targetSubcategory);
-            console.log('[TokenManagement] 未映射词元已保存');
 
             syncOutputTokens(newTokenData);
 
@@ -697,8 +652,6 @@ export function useTokenManagement() {
      * 保存词元池
      */
     const savePoolToken = async (saveData) => {
-        console.log('[TokenManagement] 保存词元池:', saveData);
-
         try {
             const targetGroup = customGroups.value.find(
                 group => group.id === saveData.groupId || group.id === saveData.groupKey
@@ -708,8 +661,6 @@ export function useTokenManagement() {
                 console.error('[TokenManagement] 未找到目标分组');
                 throw new Error(`未找到目标分组（Group ID: ${saveData.groupId}）`);
             }
-
-            console.log('[TokenManagement] 找到目标分组:', targetGroup.id);
 
             if (!targetGroup.pool) {
                 targetGroup.pool = [];
@@ -722,8 +673,6 @@ export function useTokenManagement() {
             if (poolItemIndex === -1) {
                 throw new Error(`在分组中未找到词元池项目（Pool ID: ${saveData.poolId}）`);
             }
-
-            console.log('[TokenManagement] 找到词元池项目，索引:', poolItemIndex);
 
             const updateData = {
                 name: saveData.name,
@@ -749,8 +698,6 @@ export function useTokenManagement() {
                 ...targetGroup.pool[poolItemIndex],
                 ...updateData,
             };
-
-            console.log('[TokenManagement] 词元池项目已更新');
 
             await saveCustomGroups();
 

@@ -17,21 +17,12 @@ export function useAppKeyboard(store, handlers) {
     const handleKeyDown = async (e) => {
         // ⭐ 防止重复处理
         if (isProcessing) {
-            console.log('[useAppKeyboard] 事件处理中，跳过');
             return;
         }
-
-        console.log('[useAppKeyboard] 按键:', e.key, {
-            target: e.target.tagName,
-            hasEditingToken: store.hasEditingToken.value,
-            showingDialog: store.showingGroupDialog.value,
-            showingSelector: store.showingTokenSelector.value,
-        });
 
         // 1. 对话框打开时的键盘处理
         if (store.showingGroupDialog.value || store.showingTokenSelector.value) {
             if (e.key === 'Escape') {
-                console.log('[useAppKeyboard] 关闭对话框');
                 e.preventDefault();
                 e.stopPropagation();
                 store.closeGroupDialog();
@@ -42,10 +33,8 @@ export function useAppKeyboard(store, handlers) {
 
         // 2. ⭐ 编辑状态的键盘处理（最高优先级）
         if (store.hasEditingToken.value) {
-            console.log('[useAppKeyboard] 检测到编辑状态');
 
             if (e.key === 'Escape') {
-                console.log('[useAppKeyboard] ESC：取消词元编辑');
 
                 // ⭐ 彻底阻止事件传播
                 e.preventDefault();
@@ -70,7 +59,6 @@ export function useAppKeyboard(store, handlers) {
             }
 
             if (e.key === 'Enter' && !e.shiftKey) {
-                console.log('[useAppKeyboard] Enter：确认词元编辑');
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -91,7 +79,6 @@ export function useAppKeyboard(store, handlers) {
             }
 
             if (e.ctrlKey && e.key === 'Enter') {
-                console.log('[useAppKeyboard] Ctrl+Enter：确认编辑并关闭');
 
                 e.preventDefault();
                 e.stopPropagation();
@@ -112,13 +99,11 @@ export function useAppKeyboard(store, handlers) {
             }
 
             // ⭐ 编辑状态下，阻止其他所有全局快捷键
-            console.log('[useAppKeyboard] 编辑状态中，忽略其他按键');
             return;
         }
 
         // 3. 全局键盘快捷键（仅在非编辑状态时生效）
         if (e.key === 'Escape') {
-            console.log('[useAppKeyboard] ESC：准备关闭编辑器');
             e.preventDefault();
             isProcessing = true;
 
@@ -129,12 +114,10 @@ export function useAppKeyboard(store, handlers) {
                 isProcessing = false;
             }, 150);
         } else if (e.ctrlKey && e.key === 'Enter') {
-            console.log('[useAppKeyboard] Ctrl+Enter：确认并关闭');
             e.preventDefault();
             handleConfirm();
         } else if (e.key === ' ' && store.focusedArea.value === FOCUS_AREAS.OUTPUT) {
             if (cursorPosition.value.index !== null) {
-                console.log('[useAppKeyboard] 空格：插入新词元');
                 e.preventDefault();
                 handleInsertNewToken();
             }
