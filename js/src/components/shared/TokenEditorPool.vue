@@ -140,7 +140,7 @@ const handleUpdateWeight = (index, weight) => {
 
 .form-section {
   margin-bottom: 16px;
-  padding: 12px;
+  padding: 6px;
   background: #1e1e1e;
   border-radius: 6px;
   border: 1px solid #333;

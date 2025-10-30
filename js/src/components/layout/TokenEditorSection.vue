@@ -119,18 +119,18 @@ const formOps = useTokenEditorForm(props, state, category, pool, emit);
 .editor-body-embedded {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .editor-footer-embedded {
-  padding: 12px 16px;
+  padding: 6px 10px;
   border-top: 1px solid #404040;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 6px;
   background: #252525;
   flex-shrink: 0;
 }

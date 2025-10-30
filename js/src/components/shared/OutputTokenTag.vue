@@ -174,13 +174,13 @@ const componentStyle = computed(() => {
 .token-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 4px 8px;
   background: #333;
   border: 1px solid #555;
   border-radius: 4px;
   color: #e0e0e0;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;

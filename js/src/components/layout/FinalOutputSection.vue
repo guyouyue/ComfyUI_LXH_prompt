@@ -245,9 +245,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ... 保持原有样式，只移除已在 OutputTokenTag 中的样式 ... */
-/* 这里只保留布局相关的样式 */
-
+/* ==================== 最终输出区域布局 ==================== */
 .final-output {
   background: #252525;
   border-radius: 8px;
@@ -255,7 +253,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 200px;
-  max-height: 400px;
+  max-height: 380px;
   transition: border-color 0.3s;
 }
 
@@ -263,6 +261,7 @@ onUnmounted(() => {
   border-color: #555;
 }
 
+/* ==================== 语言/模式按钮 ==================== */
 .lang-btn {
   padding: 6px 12px;
   font-size: 13px;
@@ -287,11 +286,12 @@ onUnmounted(() => {
   color: #fff;
 }
 
+/* ==================== 输出区域 ==================== */
 .output-section {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 0; /* ⭐ 关键：允许子元素收缩 */
   border-bottom: 1px solid #333;
 }
 
@@ -299,13 +299,15 @@ onUnmounted(() => {
   border-bottom: none;
 }
 
+/* ==================== 区域头部 ==================== */
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: 2px 16px;
   background: #2a2a2a;
   border-bottom: 1px solid #333;
+  flex-shrink: 0; /* ⭐ 头部不收缩 */
 }
 
 .section-title-wrapper {
@@ -355,15 +357,17 @@ onUnmounted(() => {
   background: #2196f3;
 }
 
+/* ==================== 内容区域 ==================== */
 .output-content {
-  flex: 1;
-  padding: 12px 16px;
-  overflow-y: auto;
-  cursor: text;
-  transition: background 0.2s;
+  flex: 1; /* ⭐ 占据剩余空间 */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  min-height: 0; /* ⭐ 关键：允许内部滚动 */
+  padding: 4px 12px;
+  cursor: text;
+  transition: background 0.2s;
+  gap: 2px;
+  overflow: hidden; /* ⭐ 改为 hidden，让子元素独立滚动 */
 }
 
 .output-content.focused {
@@ -371,21 +375,48 @@ onUnmounted(() => {
   box-shadow: inset 0 0 0 2px rgba(13, 125, 216, 0.3);
 }
 
+/* ==================== 词元列表 ==================== */
 .token-list {
+  flex: 1; /* ⭐ 占据剩余空间 */
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+  gap: 2px;
+  align-items: flex-start; /* ⭐ 改为顶部对齐 */
+  align-content: flex-start; /* ⭐ 内容顶部对齐 */
   position: relative;
-  min-height: 32px;
+  min-height: 0px;
+  max-height: 100%; /* ⭐ 限制最大高度 */
+  overflow-y: auto; /* ⭐ 允许独立滚动 */
+  overflow-x: hidden;
+  padding-right: 2px; /* ⭐ 为滚动条留出空间 */
 }
 
+/* ==================== 滚动条样式 ==================== */
+.token-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.token-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.token-list::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 3px;
+}
+
+.token-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ==================== 光标和占位符 ==================== */
 .cursor-placeholder {
   color: #0d7dd8;
   font-size: 16px;
   font-weight: bold;
   animation: blink 1s infinite;
   padding: 0 2px;
+  flex-shrink: 0; /* ⭐ 光标不收缩 */
 }
 
 @keyframes blink {
@@ -404,26 +435,48 @@ onUnmounted(() => {
   color: #666;
   font-style: italic;
   font-size: 13px;
+  flex-shrink: 0; /* ⭐ 占位提示不收缩 */
 }
 
+/* ==================== 文本预览 ==================== */
 .text-preview {
-  padding: 8px;
+  flex-shrink: 0; /* ⭐ 关键：文本预览不收缩，固定在底部 */
+  padding: 8px 12px;
   background: #1e1e1e;
   border-radius: 4px;
   border-left: 3px solid #444;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
+  max-height: 66px; /* ⭐ 限制最大高度 */
+  overflow-y: auto; /* ⭐ 超出时可滚动 */
+  margin-top: auto; /* ⭐ 推到底部 */
+}
+
+.text-preview::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.text-preview::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.text-preview::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 2px;
 }
 
 .preview-label {
   color: #888;
   font-weight: 600;
   margin-right: 8px;
+  white-space: nowrap; /* ⭐ 标签不换行 */
 }
 
 .preview-text {
   color: #e0e0e0;
   word-break: break-all;
+  display: inline; /* ⭐ 确保内联显示 */
 }
 
 .final-text {
@@ -431,16 +484,26 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.output-content::-webkit-scrollbar {
-  width: 8px;
-}
+/* ==================== 响应式适配 ==================== */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
 
-.output-content::-webkit-scrollbar-track {
-  background: #1e1e1e;
-}
+  .section-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
 
-.output-content::-webkit-scrollbar-thumb {
-  background: #404040;
-  border-radius: 4px;
+  .output-content {
+    padding: 4px;
+  }
+
+  .text-preview {
+    font-size: 11px;
+    padding: 6px;
+  }
 }
 </style>

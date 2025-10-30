@@ -972,8 +972,8 @@ h3 {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 16px;
-  gap: 16px;
+  padding: 6px;
+  gap: 6px;
 }
 
 .left-panel,
