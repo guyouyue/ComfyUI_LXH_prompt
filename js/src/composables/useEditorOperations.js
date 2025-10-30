@@ -61,15 +61,36 @@ export function useEditorOperations() {
         console.log('[EditorOperations] 打开编辑器:', type, tokenWithCategory);
     };
 
-    const openNewTokenEditor = () => {
+    const openNewTokenEditor = (presetData = null) => {
+        console.log('[EditorOperations] 打开新建词元编辑器，预设数据:', presetData);
+
         const newToken = {
             id: `user_${Date.now()}`,
             zh: '',
             en: '',
             jp: '',
+            description: '',
             source: 'user',
+            // ⭐ 应用预设的分类信息
+            categoryId: presetData?.categoryId || '',
+            subcategoryId: presetData?.subcategoryId || '',
+            categoryName: presetData?.categoryName || null,
+            subcategoryName: presetData?.subcategoryName || null,
         };
+
         store.openEditor(newToken, 'single');
+
+        // 如果有预设分类，显示提示信息
+        if (presetData?.categoryId && presetData?.subcategoryId) {
+            const categoryDisplay = typeof presetData.categoryName === 'string'
+                ? presetData.categoryName
+                : presetData.categoryName?.zh || presetData.categoryId;
+            const subcategoryDisplay = typeof presetData.subcategoryName === 'string'
+                ? presetData.subcategoryName
+                : presetData.subcategoryName?.zh || presetData.subcategoryId;
+
+            console.log(`[EditorOperations] 预设分类: ${categoryDisplay} / ${subcategoryDisplay}`);
+        }
     };
 
     const refreshEditingToken = (tokenId, categoryId, subcategoryId) => {
@@ -189,13 +210,6 @@ export function useEditorOperations() {
 
         // 1. 词元池类型
         if (token.isCustomPool) {
-            console.log('[EditorOperations] 检测到词元池，查找完整数据');
-            console.log('[EditorOperations] 查找条件:', {
-                poolKey: token.poolKey,
-                poolDataId: token.poolData?.id,
-                poolDataKey: token.poolData?.key,
-            });
-
             // ⭐ 修复：遍历所有分组的 pool 数组查找词元池项目
             let fullPoolData = null;
             let parentGroup = null;

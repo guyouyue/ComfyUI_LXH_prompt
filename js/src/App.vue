@@ -217,19 +217,19 @@ const insertToken = (token, isCustomGroup = false) => {
   setCursor('output', pos);
 };
 
-const handleAddNewToken = async (category, subcategory) => {
-  const zh = prompt('中文:');
-  if (!zh) return;
+const handleAddNewToken = (category, subcategory) => {
+  console.log('[App] 添加新词元到分类:', {
+    category: category.name,
+    subcategory: subcategory.name,
+  });
 
-  const en = prompt('英文:');
-  if (!en) return;
-
-  const newToken = await addNewToken(category, subcategory, {zh, en});
-
-  if (newToken) {
-    tokenMgmt.syncOutputTokens(newToken);
-    console.log('[App] 新词元已添加并同步到输出区');
-  }
+  // 调用编辑器打开方法，传入预设的分类信息
+  editorOps.openNewTokenEditor({
+    categoryId: category.id,
+    subcategoryId: subcategory.id,
+    categoryName: category.name,
+    subcategoryName: subcategory.name,
+  });
 };
 
 // ========== 词元池操作 ==========
