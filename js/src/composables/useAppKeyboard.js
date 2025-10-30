@@ -1,59 +1,147 @@
-/**
- * App 键盘事件处理
- * @param {Object} store - 应用状态
- * @param {Object} handlers - 事件处理器集合
- */
+// src/composables/useAppKeyboard.js
+import {FOCUS_AREAS} from '../utils/constants.js';
+
 export function useAppKeyboard(store, handlers) {
-  /**
-   * 全局键盘事件处理
-   */
-  const handleKeyDown = (e) => {
-    // 1️⃣ 对话框打开时的键盘处理（最高优先级）
-    if (store.showingGroupDialog.value || store.showingTokenSelector.value) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // 阻止事件冒泡
-        store.closeGroupDialog();
-        store.closeTokenSelector();
-      }
-      return;
-    }
+    const {
+        handleEditConfirm,
+        handleEditCancel,
+        handleConfirm,
+        handleCancel,
+        handleInsertNewToken,
+        cursorPosition,
+    } = handlers;
 
-    // 2️⃣ 编辑状态的键盘处理（次优先级）
-    if (store.hasEditingToken.value) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // 阻止事件冒泡
-        const editingIndex = store.finalTokens.value.findIndex(t => t.isEditing);
-        if (editingIndex !== -1) {
-          console.log('[useAppKeyboard] ESC 取消词元编辑，索引:', editingIndex);
-          handlers.handleEditCancel(editingIndex);
+    // ⭐ 防抖标记
+    let isProcessing = false;
+
+    const handleKeyDown = async (e) => {
+        // ⭐ 防止重复处理
+        if (isProcessing) {
+            console.log('[useAppKeyboard] 事件处理中，跳过');
+            return;
         }
-      } else if (e.ctrlKey && e.key === 'Enter') {
-        e.stopPropagation();
-        const editingIndex = store.finalTokens.value.findIndex(t => t.isEditing);
-        if (editingIndex !== -1) {
-          handlers.handleEditConfirm(editingIndex);
+
+        console.log('[useAppKeyboard] 按键:', e.key, {
+            target: e.target.tagName,
+            hasEditingToken: store.hasEditingToken.value,
+            showingDialog: store.showingGroupDialog.value,
+            showingSelector: store.showingTokenSelector.value,
+        });
+
+        // 1. 对话框打开时的键盘处理
+        if (store.showingGroupDialog.value || store.showingTokenSelector.value) {
+            if (e.key === 'Escape') {
+                console.log('[useAppKeyboard] 关闭对话框');
+                e.preventDefault();
+                e.stopPropagation();
+                store.closeGroupDialog();
+                store.closeTokenSelector();
+            }
+            return;
         }
-        setTimeout(() => {
-          handlers.handleConfirm();
-        }, 100);
-      }
-      return; // ⭐ 重要：阻止继续执行后续逻辑
-    }
 
-    // 3️⃣ 全局键盘快捷键（最低优先级）
-    if (e.key === 'Escape') {
-      handlers.handleCancel();
-    } else if (e.ctrlKey && e.key === 'Enter') {
-      handlers.handleConfirm();
-    } else if (e.key === ' ' && store.focusedArea.value === 'output') {
-      if (handlers.cursorPosition.value?.index !== null) {
-        e.preventDefault();
-        handlers.handleInsertNewToken();
-      }
-    }
-  };
+        // 2. ⭐ 编辑状态的键盘处理（最高优先级）
+        if (store.hasEditingToken.value) {
+            console.log('[useAppKeyboard] 检测到编辑状态');
 
-  return {
-    handleKeyDown,
-  };
+            if (e.key === 'Escape') {
+                console.log('[useAppKeyboard] ESC：取消词元编辑');
+
+                // ⭐ 彻底阻止事件传播
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                // ⭐ 设置处理标记，防止重复触发
+                isProcessing = true;
+
+                // 找到正在编辑的词元并取消
+                const editingIndex = store.finalTokens.value.findIndex(t => t.isEditing);
+                if (editingIndex !== -1) {
+                    handleEditCancel(editingIndex);
+                }
+
+                // ⭐ 延迟重置标记
+                setTimeout(() => {
+                    isProcessing = false;
+                }, 150);
+
+                return; // ⭐ 直接返回，不再执行后续代码
+            }
+
+            if (e.key === 'Enter' && !e.shiftKey) {
+                console.log('[useAppKeyboard] Enter：确认词元编辑');
+
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                isProcessing = true;
+
+                const editingIndex = store.finalTokens.value.findIndex(t => t.isEditing);
+                if (editingIndex !== -1) {
+                    handleEditConfirm(editingIndex);
+                }
+
+                setTimeout(() => {
+                    isProcessing = false;
+                }, 150);
+
+                return;
+            }
+
+            if (e.ctrlKey && e.key === 'Enter') {
+                console.log('[useAppKeyboard] Ctrl+Enter：确认编辑并关闭');
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                isProcessing = true;
+
+                const editingIndex = store.finalTokens.value.findIndex(t => t.isEditing);
+                if (editingIndex !== -1) {
+                    handleEditConfirm(editingIndex);
+                }
+
+                setTimeout(() => {
+                    handleConfirm();
+                    isProcessing = false;
+                }, 150);
+
+                return;
+            }
+
+            // ⭐ 编辑状态下，阻止其他所有全局快捷键
+            console.log('[useAppKeyboard] 编辑状态中，忽略其他按键');
+            return;
+        }
+
+        // 3. 全局键盘快捷键（仅在非编辑状态时生效）
+        if (e.key === 'Escape') {
+            console.log('[useAppKeyboard] ESC：准备关闭编辑器');
+            e.preventDefault();
+            isProcessing = true;
+
+            // ⭐ 异步处理，避免阻塞
+            await handleCancel();
+
+            setTimeout(() => {
+                isProcessing = false;
+            }, 150);
+        } else if (e.ctrlKey && e.key === 'Enter') {
+            console.log('[useAppKeyboard] Ctrl+Enter：确认并关闭');
+            e.preventDefault();
+            handleConfirm();
+        } else if (e.key === ' ' && store.focusedArea.value === FOCUS_AREAS.OUTPUT) {
+            if (cursorPosition.value.index !== null) {
+                console.log('[useAppKeyboard] 空格：插入新词元');
+                e.preventDefault();
+                handleInsertNewToken();
+            }
+        }
+    };
+
+    return {
+        handleKeyDown,
+    };
 }

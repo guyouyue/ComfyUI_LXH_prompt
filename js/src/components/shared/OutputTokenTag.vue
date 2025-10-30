@@ -87,7 +87,7 @@ const componentProps = computed(() => {
     return {
       type: 'text',
       value: props.modelValue,
-      placeholder: '输入词元 (回车确认, ESC取消)',
+      placeholder: '输入词元 (回车确认)',
       onInput: (e) => emit('update:modelValue', e.target.value),
     };
   }

@@ -278,7 +278,7 @@ const handleTokenSelected = (token) => {
 // ========== UI 辅助 ==========
 const getFocusTips = () => {
   if (store.hasEditingToken.value) {
-    return '正在编辑词元中... (回车确认 | ESC取消)';
+    return '正在编辑词元中... (回车确认)';
   }
 
   const tips = {
@@ -292,7 +292,7 @@ const getFocusTips = () => {
 // ========== 确认/取消 ==========
 const handleConfirm = () => {
   if (store.hasEditingToken.value) {
-    alert('请先完成词元编辑（回车确认或ESC取消）');
+    alert('请先完成词元编辑（回车确认）');
     return;
   }
 
