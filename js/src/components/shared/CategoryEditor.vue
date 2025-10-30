@@ -15,11 +15,6 @@
       </span>
     </div>
 
-    <!-- 警告提示 -->
-    <div v-if="isSystemCategory" class="warning-banner">
-      ⚠️ 系统分类不可直接编辑，保存后将创建用户副本
-    </div>
-
     <!-- 基本信息 -->
     <div class="form-section">
       <h5>📋 基本信息</h5>
