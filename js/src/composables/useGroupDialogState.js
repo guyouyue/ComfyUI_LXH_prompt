@@ -1,4 +1,4 @@
-<!--src/composables/useGroupDialogState.js-->
+// src/composables/useGroupDialogState.js
 import {ref, watch} from 'vue';
 
 /**

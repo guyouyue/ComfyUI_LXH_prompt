@@ -1,4 +1,4 @@
-<!--src/composables/useStorage.js-->
+// src/composables/useStorage.js
 import {ref} from 'vue';
 import {DEFAULT_CONFIG, STORAGE_KEYS} from '../utils/constants.js';
 

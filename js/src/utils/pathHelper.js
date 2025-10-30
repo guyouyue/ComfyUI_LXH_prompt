@@ -1,4 +1,4 @@
-<!--src/utils/pathHelper.js-->
+// src/utils/pathHelper.js
 
 /**
  * 路径辅助工具 - 开发环境直接使用本地文件

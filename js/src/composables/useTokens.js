@@ -1,4 +1,4 @@
-<!--src/composables/useTokens.js-->
+// src/composables/useTokens.js
 import {ref} from 'vue';
 import {getDataPath, getSaveUserTokensPath, getUserDataPath} from '../utils/pathHelper.js';
 

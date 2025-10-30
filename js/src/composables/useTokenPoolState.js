@@ -1,4 +1,4 @@
-<!--src/composables/useTokenPoolState.js-->
+// src/composables/useTokenPoolState.js
 import {ref} from 'vue';
 
 export function useTokenPoolState() {

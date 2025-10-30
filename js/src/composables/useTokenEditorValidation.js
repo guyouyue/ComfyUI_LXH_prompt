@@ -1,4 +1,4 @@
-<!--src/composables/useTokenEditorValidation.js-->
+// src/composables/useTokenEditorValidation.js
 import {computed} from 'vue';
 
 /**

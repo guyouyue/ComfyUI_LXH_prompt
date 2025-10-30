@@ -1,4 +1,4 @@
-<!--src/composables/useTokenSelectorSearch.js-->
+// src/composables/useTokenSelectorSearch.js
 import {computed} from 'vue';
 
 /**

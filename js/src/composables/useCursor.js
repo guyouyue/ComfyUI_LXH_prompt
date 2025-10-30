@@ -1,4 +1,4 @@
-<!--src/composables/useCursor.js-->
+// src/composables/useCursor.js
 import {ref} from 'vue';
 
 export function useCursor() {

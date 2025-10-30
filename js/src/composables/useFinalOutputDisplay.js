@@ -1,4 +1,4 @@
-<!--src/composables/useFinalOutputDisplay.js-->
+// src/composables/useFinalOutputDisplay.js
 import {computed} from 'vue';
 
 /**

@@ -1,4 +1,4 @@
-<!--src/composables/useGroupDialogValidation.js-->
+// src/composables/useGroupDialogValidation.js
 import {computed} from 'vue';
 
 /**

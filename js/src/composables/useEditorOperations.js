@@ -1,4 +1,4 @@
-<!--src/composables/useEditorOperations.js-->
+// src/composables/useEditorOperations.js
 import {useAppStore} from './useAppStore.js';
 import {useTokenManagement} from './useTokenManagement.js';
 import {useTokens} from './useTokens.js';

@@ -1,4 +1,4 @@
-<!--src/composables/useTokenPoolSearch.js-->
+// src/composables/useTokenPoolSearch.js
 import {computed, ref} from 'vue';
 
 export function useTokenPoolSearch(categories, customGroups) {

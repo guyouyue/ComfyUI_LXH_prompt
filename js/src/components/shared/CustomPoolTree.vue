@@ -16,13 +16,21 @@
           :key="group.id"
           class="subcategory custom-group"
       >
-        <!-- 二级分组标题 -->
-        <div
-            class="subcategory-header"
-            @click.stop="$emit('toggle-group', group.id)"
-        >
-          <span class="subcategory-icon">{{ isGroupExpanded(group.id) ? '▼' : '▶' }}</span>
-          <span class="subcategory-title">{{ getGroupName(group) }}</span>
+        <!-- 二级分组标题 - ⭐ 修改点击逻辑 -->
+        <div class="subcategory-header">
+          <span
+              class="subcategory-icon"
+              @click.stop="$emit('toggle-group', group.id)"
+          >
+            {{ isGroupExpanded(group.id) ? '▼' : '▶' }}
+          </span>
+          <span
+              class="subcategory-title"
+              @click.stop="$emit('group-click', group)"
+              title="单击编辑词元池分组"
+          >
+            {{ getGroupName(group) }}
+          </span>
           <span class="subcategory-count">({{ group.pool?.length || 0 }})</span>
         </div>
 
@@ -65,6 +73,7 @@ defineEmits([
   'toggle-group',
   'pool-item-click',
   'pool-item-dblclick',
+  'group-click',
 ]);
 
 const isGroupExpanded = (groupId) => {
@@ -202,5 +211,13 @@ const isGroupExpanded = (groupId) => {
   padding: 8px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+}
+
+.subcategory-title {
+  cursor: pointer; /* ⭐ 新增 */
+}
+
+.subcategory-title:hover {
+  color: #667eea; /* ⭐ 新增：鼠标悬停高亮 */
 }
 </style>

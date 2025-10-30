@@ -1,4 +1,4 @@
-<!--src/composables/useAppConfirm.js-->
+// src/composables/useAppConfirm.js
 import {ref} from 'vue';
 
 /**

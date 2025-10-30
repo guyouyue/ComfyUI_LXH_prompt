@@ -1,4 +1,4 @@
-<!--src/composables/useAppStore.js-->
+// src/composables/useAppStore.js
 import {computed, ref} from 'vue';
 import {FOCUS_AREAS, LANGUAGES, OUTPUT_MODES} from '../utils/constants.js';
 
@@ -24,6 +24,11 @@ const state = {
     editingTokenType: ref('single'), // 'single', 'unmapped', 'pool'
     showEditor: ref(false),
 };
+
+// 在现有的 ref 定义后添加：
+const showCategoryEditor = ref(false);
+const editingCategory = ref(null);
+const editingCategoryType = ref(null); // 'category' | 'subcategory' | 'pool'
 
 export function useAppStore() {
     // ========== Getters (计算属性) ==========
@@ -141,6 +146,28 @@ export function useAppStore() {
         state.showingTokenSelector.value = false;
     };
 
+    /**
+     * 打开分类编辑器
+     */
+    const openCategoryEditor = (categoryData, categoryType) => {
+        editingCategory.value = categoryData;
+        editingCategoryType.value = categoryType;
+        showCategoryEditor.value = true;
+        state.showEditor.value = true; // 显示编辑面板
+        console.log('[AppStore] 打开分类编辑器:', {categoryType, categoryData});
+    };
+
+    /**
+     * 关闭分类编辑器
+     */
+    const closeCategoryEditor = () => {
+        editingCategory.value = null;
+        editingCategoryType.value = null;
+        showCategoryEditor.value = false;
+        state.showEditor.value = false;
+        console.log('[AppStore] 关闭分类编辑器');
+    };
+
     // ========== 返回接口 ==========
     return {
         // State
@@ -181,5 +208,10 @@ export function useAppStore() {
         closeGroupDialog,
         openTokenSelector,
         closeTokenSelector,
+        showCategoryEditor,
+        editingCategory,
+        editingCategoryType,
+        openCategoryEditor,
+        closeCategoryEditor,
     };
 }

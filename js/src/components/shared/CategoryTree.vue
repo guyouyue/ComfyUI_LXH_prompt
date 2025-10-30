@@ -6,12 +6,20 @@
       class="category"
   >
     <!-- 一级分类标题 -->
-    <div
-        class="category-header"
-        @click="$emit('toggle-category', category.id)"
-    >
-      <span class="category-icon">{{ isExpanded(category.id) ? '▼' : '▶' }}</span>
-      <span class="category-title">{{ getCategoryName(category) }}</span>
+    <div class="category-header">
+      <span
+          class="category-icon"
+          @click.stop="$emit('toggle-category', category.id)"
+      >
+        {{ isExpanded(category.id) ? '▼' : '▶' }}
+      </span>
+      <span
+          class="category-title"
+          @click="$emit('category-click', category)"
+          title="单击编辑分类"
+      >
+        {{ getCategoryName(category) }}
+      </span>
       <span class="category-count">({{ getCategoryTokenCount(category) }})</span>
     </div>
 
@@ -22,15 +30,21 @@
           :key="subcategory.id"
           class="subcategory"
       >
-        <!-- 二级分类标题 -->
-        <div
-            class="subcategory-header"
-            @click.stop="$emit('toggle-subcategory', category.id, subcategory.id)"
-        >
-          <span class="subcategory-icon">{{
-              isSubcategoryExpanded(category.id, subcategory.id) ? '▼' : '▶'
-            }}</span>
-          <span class="subcategory-title">{{ getSubcategoryName(subcategory) }}</span>
+        <!-- 二级分类标题 - ⭐ 修改点击逻辑 -->
+        <div class="subcategory-header">
+          <span
+              class="subcategory-icon"
+              @click.stop="$emit('toggle-subcategory', category.id, subcategory.id)"
+          >
+            {{ isSubcategoryExpanded(category.id, subcategory.id) ? '▼' : '▶' }}
+          </span>
+          <span
+              class="subcategory-title"
+              @click.stop="$emit('subcategory-click', { category, subcategory })"
+              title="单击编辑子分类"
+          >
+            {{ getSubcategoryName(subcategory) }}
+          </span>
           <span class="subcategory-count">({{ subcategory.tokens.length }})</span>
           <button
               class="add-token-btn"
@@ -83,6 +97,8 @@ defineEmits([
   'token-click',
   'token-dblclick',
   'add-token',
+  'category-click',
+  'subcategory-click',
 ]);
 
 const isExpanded = (categoryId) => {
@@ -228,5 +244,16 @@ const isSubcategoryExpanded = (categoryId, subcategoryId) => {
   flex-wrap: wrap;
   gap: 6px;
   align-items: flex-start;
+}
+
+
+.category-title,
+.subcategory-title {
+  cursor: pointer; /* ⭐ 新增 */
+}
+
+.category-title:hover,
+.subcategory-title:hover {
+  color: #0d7dd8; /* ⭐ 新增：鼠标悬停高亮 */
 }
 </style>

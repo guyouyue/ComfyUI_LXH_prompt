@@ -22,6 +22,7 @@ import {useCursor} from './composables/useCursor.js';
 import {useStorage} from './composables/useStorage.js';
 import {useAppKeyboard} from './composables/useAppKeyboard.js';
 import {useAppConfirm} from './composables/useAppConfirm.js';
+import {useCategoryManagement} from './composables/useCategoryManagement.js'
 
 // ========== 工具函数导入 ==========
 import {tokensToText} from './utils/tokenParser.js';
@@ -55,6 +56,7 @@ const editorOps = useEditorOperations();
 const {cursorPosition, setCursor} = useCursor();
 const {updatePreferences} = useStorage();
 const confirmDialog = useAppConfirm();
+const categoryMgmt = useCategoryManagement();
 
 // ⭐ 添加加载状态
 const isInitialized = ref(false);
@@ -275,7 +277,39 @@ const handleTokenSelected = (token) => {
     store.closeTokenSelector();
   }
 };
+// ========== 分类编辑操作 ==========
+const handleCategoryClick = (category) => {
+  console.log('[App] 一级分类被点击:', category);
+  categoryMgmt.openCategoryEditor(category, 'category');
+};
 
+const handleSubcategoryClick = (data) => {
+  console.log('[App] 二级分类被点击:', data);
+  const {category, subcategory} = data;
+
+  // 添加父级信息
+  const enrichedData = {
+    ...subcategory,
+    parentId: category.id,
+    parentData: category
+  };
+
+  categoryMgmt.openCategoryEditor(enrichedData, 'subcategory');
+};
+
+const handleGroupClick = (group) => {
+  console.log('[App] 词元池分组被点击:', group);
+  categoryMgmt.openCategoryEditor(group, 'pool');
+};
+
+const handleCategorySave = async (saveData) => {
+  console.log('[App] 保存分类数据:', saveData);
+  const success = await categoryMgmt.saveCategoryEdit(saveData);
+
+  if (success) {
+    store.closeCategoryEditor();
+  }
+};
 // ========== UI 辅助 ==========
 const getFocusTips = () => {
   if (store.hasEditingToken.value) {
@@ -405,11 +439,14 @@ onUnmounted(() => {
                       v-if="store.showEditor.value"
                       :token="store.editingToken.value"
                       :token-type="store.editingTokenType.value"
+                      :category-data="store.editingCategory.value"
+                      :category-type="store.editingCategoryType.value"
                       :categories="tokenCategories"
                       :language="store.viewLanguage.value"
                       :is-embedded="true"
-                      @close="store.closeEditor"
+                      @close="store.closeEditor(); store.closeCategoryEditor()"
                       @save="editorOps.handleTokenSave"
+                      @save-category="handleCategorySave"
                       @view-token="editorOps.handlePoolTokenClick"
                       @edit-token="editorOps.handlePoolTokenClick"
                   />
@@ -469,6 +506,9 @@ onUnmounted(() => {
                   @pool-item-click="editorOps.handlePoolItemClick"
                   @add-token="handleAddNewToken"
                   @use-pool-item="handleUsePoolItem"
+                  @category-click="handleCategoryClick"
+                  @subcategory-click="handleSubcategoryClick"
+                  @group-click="handleGroupClick"
                   @click="store.setFocusedArea('pool')"
               />
             </div>

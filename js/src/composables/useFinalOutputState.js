@@ -1,4 +1,4 @@
-<!--src/composables/useFinalOutputState.js-->
+// src/composables/useFinalOutputState.js
 import {ref} from 'vue';
 
 /**

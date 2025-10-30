@@ -1,4 +1,4 @@
-<!--src/composables/useFinalOutputDrag.js-->
+// src/composables/useFinalOutputDrag.js
 import {ref} from 'vue';
 
 /**

@@ -1,4 +1,4 @@
-<!--src/utils/constants.js-->
+// src/utils/constants.js
 /**
  * 常量定义
  */

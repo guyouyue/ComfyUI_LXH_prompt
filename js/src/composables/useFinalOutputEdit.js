@@ -1,4 +1,4 @@
-<!--src/composables/useFinalOutputEdit.js-->
+// src/composables/useFinalOutputEdit.js
 import {nextTick, watch} from 'vue';
 
 /**

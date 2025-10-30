@@ -29,6 +29,7 @@
           @toggle-group="state.toggleCustomGroup"
           @pool-item-click="operations.handlePoolItemClick"
           @pool-item-dblclick="operations.handlePoolItemDoubleClick"
+          @group-click="$emit('group-click', $event)"
       />
 
       <!-- 系统词库分类树 -->
@@ -46,6 +47,8 @@
           @token-click="operations.handleTokenClick"
           @token-dblclick="operations.handleTokenDoubleClick"
           @add-token="(category, subcategory) => $emit('add-token', category, subcategory)"
+          @category-click="$emit('category-click', $event)"
+          @subcategory-click="$emit('subcategory-click', $event)"
       />
 
       <!-- 空状态 -->
@@ -95,6 +98,9 @@ const emit = defineEmits([
   'pool-item-click',
   'add-token',
   'use-pool-item',
+  'category-click',
+  'subcategory-click',
+  'group-click',
 ]);
 
 // ========== Composables ==========

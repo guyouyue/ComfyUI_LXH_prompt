@@ -1,4 +1,4 @@
-<!--src/composables/useTokenPoolOperations.js-->
+// src/composables/useTokenPoolOperations.js
 export function useTokenPoolOperations(emit, categories, language) {
     /**
      * 处理词元单击（打开编辑器）

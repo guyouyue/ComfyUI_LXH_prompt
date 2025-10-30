@@ -2,6 +2,15 @@
 <template>
   <div class="token-editor-embedded">
     <div class="editor-body-embedded">
+      <!-- ⭐ 新增：分类编辑器 -->
+      <CategoryEditor
+          v-if="categoryType"
+          :category-data="categoryData"
+          :category-type="categoryType"
+          :language="language"
+          @close="$emit('close')"
+          @save="$emit('save-category', $event)"
+      />
       <!-- 单个词元编辑 -->
       <TokenEditorSingle
           v-if="tokenType === 'single'"
@@ -56,7 +65,7 @@
     </div>
 
     <!-- 底部操作栏 -->
-    <div class="editor-footer-embedded">
+    <div v-if="!categoryType" class="editor-footer-embedded">
       <button @click="$emit('close')" class="btn-secondary">取消</button>
       <button class="primary" @click="formOps.handleSave" :disabled="!validation.canSave.value">
         {{ formOps.getSaveButtonText() }}
@@ -74,10 +83,13 @@ import {useTokenEditorValidation} from '../../composables/useTokenEditorValidati
 import {useTokenEditorCategory} from '../../composables/useTokenEditorCategory.js';
 import {useTokenEditorPool} from '../../composables/useTokenEditorPool.js';
 import {useTokenEditorForm} from '../../composables/useTokenEditorForm.js';
+import CategoryEditor from '../shared/CategoryEditor.vue';
 
 const props = defineProps({
   token: Object,
   tokenType: String,
+  categoryData: Object,
+  categoryType: String,
   categories: Array,
   language: String,
   isEmbedded: {
@@ -86,7 +98,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['close', 'save', 'view-token', 'edit-token', 'new-category']);
+const emit = defineEmits(['close', 'save', 'view-token', 'edit-token', 'new-category', 'save-category',]);
 
 // ========== Composables ==========
 const state = useTokenEditorState();

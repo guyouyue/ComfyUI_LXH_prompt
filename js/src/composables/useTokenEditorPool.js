@@ -1,4 +1,4 @@
-<!--src/composables/useTokenEditorPool.js-->
+// src/composables/useTokenEditorPool.js
 /**
  * TokenEditor 词元池操作
  * @param {Object} props - 组件 props

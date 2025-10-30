@@ -1,4 +1,4 @@
-<!--src/composables/useTokenEditorCategory.js-->
+// src/composables/useTokenEditorCategory.js
 import {computed, watch} from 'vue';
 
 /**

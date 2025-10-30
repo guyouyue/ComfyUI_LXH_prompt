@@ -1,4 +1,4 @@
-<!--src/composables/useTokenSelectorState.js-->
+// src/composables/useTokenSelectorState.js
 import {ref} from 'vue';
 
 /**

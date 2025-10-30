@@ -1,4 +1,4 @@
-<!--src/composables/useGroupManagement.js-->
+// src/composables/useGroupManagement.js
 import {useCustomGroups} from './useCustomGroups.js';
 
 export function useGroupManagement() {

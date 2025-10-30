@@ -1,4 +1,4 @@
-<!--src/composables/useTokenEditorState.js-->
+// src/composables/useTokenEditorState.js
 import {computed, ref} from 'vue';
 
 /**
