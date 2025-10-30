@@ -1,4 +1,221 @@
 <!--src/app.vue-->
+<template>
+  <Transition name="modal">
+    <div v-if="true" class="lxh-modal-overlay" @click.self="handleCancel" @mousedown.stop>
+      <div class="lxh-modal-content" @mousedown.stop>
+        <!-- ========== 头部 ========== -->
+        <div class="lxh-modal-header">
+          <div class="header-left">
+            <h3>✨ LXH Prompt 编辑器</h3>
+
+            <!-- ⭐ 新增：模式切换按钮 -->
+            <div class="mode-switcher">
+              <button
+                  class="mode-btn"
+                  :class="{ active: store.outputMode.value === 'token' }"
+                  @click="store.setOutputMode('token')"
+                  title="提示词词元形式"
+              >
+                📝 词元模式
+              </button>
+              <button
+                  class="mode-btn"
+                  :class="{ active: store.outputMode.value === 'natural' }"
+                  @click="store.setOutputMode('natural')"
+                  title="自然语言模式（待开发）"
+              >
+                💬 自然语言（待开发）
+              </button>
+            </div>
+
+            <span v-if="store.hasEditingToken.value" class="editing-indicator">
+              ✏️ 编辑中...
+            </span>
+          </div>
+          <button class="close-btn" @click="handleCancel">&times;</button>
+        </div>
+
+        <!-- ========== 主体 ========== -->
+        <div class="lxh-modal-body">
+          <!-- 最终输出区 -->
+          <FinalOutputSection
+              :tokens="store.finalTokens.value"
+              :mode="store.outputMode.value"
+              :language="store.outputLanguage.value"
+              :view-language="store.viewLanguage.value"
+              :focused="store.focusedArea.value === 'output'"
+              :cursor-index="cursorPosition.index"
+              @update:mode="store.setOutputMode($event)"
+              @update:language="handleOutputLanguageChange"
+              @update:view-language="handleViewLanguageChange"
+              @token-click="handleTokenClick"
+              @token-dblclick="editorOps.handleTokenEdit"
+              @remove-token="handleRemoveToken"
+              @focus="store.setFocusedArea('output')"
+              @reorder-tokens="handleReorderTokens"
+              @edit-confirm="handleEditConfirm"
+              @edit-cancel="handleEditCancel"
+          />
+
+          <!-- 底部面板 -->
+          <div class="bottom-panels">
+            <!-- 左侧：词元编辑面板 -->
+            <div class="left-panel">
+              <div class="token-editor-panel">
+                <div class="panel-header">
+                  <h4>✏️ 词元编辑</h4>
+                  <div class="panel-controls">
+                    <button
+                        class="add-token-btn"
+                        @click="editorOps.openNewTokenEditor"
+                        title="添加新词元到用户词库"
+                    >
+                      ＋ 新建词元
+                    </button>
+                  </div>
+                </div>
+                <div class="panel-content">
+                  <TokenEditorSection
+                      v-if="store.showEditor.value"
+                      :token="store.editingToken.value"
+                      :token-type="store.editingTokenType.value"
+                      :category-data="store.editingCategory.value"
+                      :category-type="store.editingCategoryType.value"
+                      :categories="tokenCategories"
+                      :language="store.viewLanguage.value"
+                      :is-embedded="true"
+                      @close="store.closeEditor(); store.closeCategoryEditor()"
+                      @save="editorOps.handleTokenSave"
+                      @save-category="handleCategorySave"
+                      @view-token="editorOps.handlePoolTokenClick"
+                      @edit-token="editorOps.handlePoolTokenClick"
+                  />
+                  <div v-else class="editor-intro">
+                    <h5>编辑功能说明</h5>
+                    <ul class="feature-list">
+                      <li>
+                        <span class="feature-icon">📝</span>
+                        <span class="feature-text">双击输出区词元进行编辑</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">👆</span>
+                        <span class="feature-text">单击词库词元查看/编辑</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">🎲</span>
+                        <span class="feature-text">单击词元池管理权重和内容</span>
+                      </li>
+                      <li>
+                        <span class="feature-icon">⚙️</span>
+                        <span class="feature-text">系统词元会创建用户副本</span>
+                      </li>
+                    </ul>
+
+                    <div class="quick-stats">
+                      <div class="stat-item">
+                        <span class="stat-label">总词元数</span>
+                        <span class="stat-value">{{ store.finalTokens.value.length }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">已映射</span>
+                        <span class="stat-value">{{ store.mappedTokensCount.value }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">未映射</span>
+                        <span class="stat-value">{{ store.unmappedTokensCount.value }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">词元池</span>
+                        <span class="stat-value">{{ store.poolTokensCount.value }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧：词元映射池 -->
+            <div class="right-panel">
+              <TokenPoolSection
+                  :categories="tokenCategories"
+                  :custom-groups="customGroups"
+                  :language="store.viewLanguage.value"
+                  :focused="store.focusedArea.value === 'pool'"
+                  @token-click="handlePoolTokenClick"
+                  @token-dblclick="handlePoolTokenDoubleClick"
+                  @pool-item-click="editorOps.handlePoolItemClick"
+                  @add-token="handleAddNewToken"
+                  @use-pool-item="handleUsePoolItem"
+                  @category-click="handleCategoryClick"
+                  @subcategory-click="handleSubcategoryClick"
+                  @group-click="handleGroupClick"
+                  @click="store.setFocusedArea('pool')"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== 底部操作栏 ========== -->
+        <div class="lxh-modal-footer">
+          <div class="footer-tips">
+            💡 {{ getFocusTips() }} | 词元数: {{ store.finalTokens.value.length }} | 字符数: {{
+              finalText.length
+            }}
+            | 查看语言:
+            {{
+              store.viewLanguage.value === 'zh'
+                  ? '中文'
+                  : store.viewLanguage.value === 'en'
+                      ? '英文'
+                      : '日文'
+            }}
+            | 输出语言:
+            {{
+              store.outputLanguage.value === 'zh'
+                  ? '中文'
+                  : store.outputLanguage.value === 'en'
+                      ? '英文'
+                      : '日文'
+            }}
+            <span v-if="!store.hasEditingToken.value" class="shortcut-tip">
+              | <strong>选中词元后按空格插入新词元</strong>
+            </span>
+          </div>
+          <div class="footer-actions">
+            <button @click="handleCancel">取消 (Esc)</button>
+            <button class="primary" @click="handleConfirm">确认 (Ctrl+Enter)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== 对话框 ========== -->
+      <GroupDialog
+          v-if="store.showingGroupDialog.value"
+          :group="store.editingGroup.value"
+          :is-edit="!!store.editingGroup.value"
+          @close="store.closeGroupDialog"
+          @confirm="handleGroupConfirm"
+      />
+
+      <TokenSelector
+          v-if="store.showingTokenSelector.value"
+          :all-tokens="tokenMgmt.allTokensFlat.value"
+          :language="store.viewLanguage.value"
+          @close="store.closeTokenSelector"
+          @select="handleTokenSelected"
+      />
+
+      <!-- ⭐ 新增：确认对话框 -->
+      <ConfirmDialog
+          :show="confirmDialog.showConfirmDialog.value"
+          :message="confirmDialog.confirmMessage.value"
+          @confirm="confirmDialog.handleConfirm"
+          @cancel="confirmDialog.handleCancelConfirm"
+      />
+    </div>
+  </Transition>
+</template>
+
 <script setup>
 import {computed, onMounted, onUnmounted, ref} from 'vue';
 
@@ -380,204 +597,152 @@ onUnmounted(() => {
 });
 </script>
 
-<template>
-  <Transition name="modal">
-    <div v-if="true" class="lxh-modal-overlay" @click.self="handleCancel" @mousedown.stop>
-      <div class="lxh-modal-content" @mousedown.stop>
-        <!-- ========== 头部 ========== -->
-        <div class="lxh-modal-header">
-          <div class="header-left">
-            <h3>✨ LXH Prompt 编辑器</h3>
-            <span v-if="store.hasEditingToken.value" class="editing-indicator">
-              ✏️ 编辑中...
-            </span>
-          </div>
-          <button class="close-btn" @click="handleCancel">&times;</button>
-        </div>
-
-        <!-- ========== 主体 ========== -->
-        <div class="lxh-modal-body">
-          <!-- 最终输出区 -->
-          <FinalOutputSection
-              :tokens="store.finalTokens.value"
-              :mode="store.outputMode.value"
-              :language="store.outputLanguage.value"
-              :view-language="store.viewLanguage.value"
-              :focused="store.focusedArea.value === 'output'"
-              :cursor-index="cursorPosition.index"
-              @update:mode="store.setOutputMode($event)"
-              @update:language="handleOutputLanguageChange"
-              @update:view-language="handleViewLanguageChange"
-              @token-click="handleTokenClick"
-              @token-dblclick="editorOps.handleTokenEdit"
-              @remove-token="handleRemoveToken"
-              @focus="store.setFocusedArea('output')"
-              @reorder-tokens="handleReorderTokens"
-              @edit-confirm="handleEditConfirm"
-              @edit-cancel="handleEditCancel"
-          />
-
-          <!-- 底部面板 -->
-          <div class="bottom-panels">
-            <!-- 左侧：词元编辑面板 -->
-            <div class="left-panel">
-              <div class="token-editor-panel">
-                <div class="panel-header">
-                  <h4>✏️ 词元编辑</h4>
-                  <div class="panel-controls">
-                    <button
-                        class="add-token-btn"
-                        @click="editorOps.openNewTokenEditor"
-                        title="添加新词元到用户词库"
-                    >
-                      ＋ 新建词元
-                    </button>
-                  </div>
-                </div>
-                <div class="panel-content">
-                  <TokenEditorSection
-                      v-if="store.showEditor.value"
-                      :token="store.editingToken.value"
-                      :token-type="store.editingTokenType.value"
-                      :category-data="store.editingCategory.value"
-                      :category-type="store.editingCategoryType.value"
-                      :categories="tokenCategories"
-                      :language="store.viewLanguage.value"
-                      :is-embedded="true"
-                      @close="store.closeEditor(); store.closeCategoryEditor()"
-                      @save="editorOps.handleTokenSave"
-                      @save-category="handleCategorySave"
-                      @view-token="editorOps.handlePoolTokenClick"
-                      @edit-token="editorOps.handlePoolTokenClick"
-                  />
-                  <div v-else class="editor-intro">
-                    <h5>编辑功能说明</h5>
-                    <ul class="feature-list">
-                      <li>
-                        <span class="feature-icon">📝</span>
-                        <span class="feature-text">双击输出区词元进行编辑</span>
-                      </li>
-                      <li>
-                        <span class="feature-icon">👆</span>
-                        <span class="feature-text">单击词库词元查看/编辑</span>
-                      </li>
-                      <li>
-                        <span class="feature-icon">🎲</span>
-                        <span class="feature-text">单击词元池管理权重和内容</span>
-                      </li>
-                      <li>
-                        <span class="feature-icon">⚙️</span>
-                        <span class="feature-text">系统词元会创建用户副本</span>
-                      </li>
-                    </ul>
-
-                    <div class="quick-stats">
-                      <div class="stat-item">
-                        <span class="stat-label">总词元数</span>
-                        <span class="stat-value">{{ store.finalTokens.value.length }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">已映射</span>
-                        <span class="stat-value">{{ store.mappedTokensCount.value }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">未映射</span>
-                        <span class="stat-value">{{ store.unmappedTokensCount.value }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">词元池</span>
-                        <span class="stat-value">{{ store.poolTokensCount.value }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 右侧：词元映射池 -->
-            <div class="right-panel">
-              <TokenPoolSection
-                  :categories="tokenCategories"
-                  :custom-groups="customGroups"
-                  :language="store.viewLanguage.value"
-                  :focused="store.focusedArea.value === 'pool'"
-                  @token-click="handlePoolTokenClick"
-                  @token-dblclick="handlePoolTokenDoubleClick"
-                  @pool-item-click="editorOps.handlePoolItemClick"
-                  @add-token="handleAddNewToken"
-                  @use-pool-item="handleUsePoolItem"
-                  @category-click="handleCategoryClick"
-                  @subcategory-click="handleSubcategoryClick"
-                  @group-click="handleGroupClick"
-                  @click="store.setFocusedArea('pool')"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- ========== 底部操作栏 ========== -->
-        <div class="lxh-modal-footer">
-          <div class="footer-tips">
-            💡 {{ getFocusTips() }} | 词元数: {{ store.finalTokens.value.length }} | 字符数: {{
-              finalText.length
-            }}
-            | 查看语言:
-            {{
-              store.viewLanguage.value === 'zh'
-                  ? '中文'
-                  : store.viewLanguage.value === 'en'
-                      ? '英文'
-                      : '日文'
-            }}
-            | 输出语言:
-            {{
-              store.outputLanguage.value === 'zh'
-                  ? '中文'
-                  : store.outputLanguage.value === 'en'
-                      ? '英文'
-                      : '日文'
-            }}
-            <span v-if="!store.hasEditingToken.value" class="shortcut-tip">
-              | <strong>选中词元后按空格插入新词元</strong>
-            </span>
-          </div>
-          <div class="footer-actions">
-            <button @click="handleCancel">取消 (Esc)</button>
-            <button class="primary" @click="handleConfirm">确认 (Ctrl+Enter)</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ========== 对话框 ========== -->
-      <GroupDialog
-          v-if="store.showingGroupDialog.value"
-          :group="store.editingGroup.value"
-          :is-edit="!!store.editingGroup.value"
-          @close="store.closeGroupDialog"
-          @confirm="handleGroupConfirm"
-      />
-
-      <TokenSelector
-          v-if="store.showingTokenSelector.value"
-          :all-tokens="tokenMgmt.allTokensFlat.value"
-          :language="store.viewLanguage.value"
-          @close="store.closeTokenSelector"
-          @select="handleTokenSelected"
-      />
-
-      <!-- ⭐ 新增：确认对话框 -->
-      <ConfirmDialog
-          :show="confirmDialog.showConfirmDialog.value"
-          :message="confirmDialog.confirmMessage.value"
-          @confirm="confirmDialog.handleConfirm"
-          @cancel="confirmDialog.handleCancelConfirm"
-      />
-    </div>
-  </Transition>
-</template>
-
-
 <style scoped>
+/* ==================== 模态框头部 ==================== */
+.lxh-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #404040;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #252525;
+  border-radius: 12px 12px 0 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+h3 {
+  margin: 0;
+  color: #fafafa;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ⭐ 新增：模式切换器样式 */
+.mode-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #1e1e1e;
+  border-radius: 6px;
+  border: 1px solid #404040;
+}
+
+.mode-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #0d7dd8, #1e88e5);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(13, 125, 216, 0.4);
+}
+
+.editing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #ff9800;
+  color: #000;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 12px;
+  animation: pulse-editing 1.5s infinite;
+}
+
+@keyframes pulse-editing {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #404040;
+  color: #fff;
+}
+
+/* ==================== 响应式适配 ==================== */
+@media (max-width: 1200px) {
+  .header-left {
+    gap: 12px;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  .mode-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lxh-modal-header {
+    padding: 12px 16px;
+  }
+
+  .header-left {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  h3 {
+    font-size: 14px;
+  }
+
+  .mode-switcher {
+    order: 3;
+    width: 100%;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 6px 8px;
+  }
+}
+
 /* ==================== 词元编辑面板样式 ==================== */
 .token-editor-panel {
   background: #252525;

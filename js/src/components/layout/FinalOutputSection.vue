@@ -1,28 +1,6 @@
 <!--src/components/layout/FinalOutputSection.vue-->
 <template>
   <div class="final-output" @click="$emit('focus')">
-    <!-- 头部 -->
-    <div class="output-header">
-      <div class="output-controls">
-        <button
-            class="mode-btn"
-            :class="{ active: mode === 'token' }"
-            @click="$emit('update:mode', 'token')"
-            title="提示词词元形式"
-        >
-          📝 词元模式
-        </button>
-        <button
-            class="mode-btn"
-            :class="{ active: mode === 'natural' }"
-            @click="$emit('update:mode', 'natural')"
-            title="自然语言模式"
-        >
-          💬 自然语言(待开发)
-        </button>
-      </div>
-    </div>
-
     <!-- 映射查看区域 -->
     <div class="output-section original-section">
       <div class="section-header">
@@ -285,21 +263,6 @@ onUnmounted(() => {
   border-color: #555;
 }
 
-.output-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #404040;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.output-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.mode-btn,
 .lang-btn {
   padding: 6px 12px;
   font-size: 13px;
