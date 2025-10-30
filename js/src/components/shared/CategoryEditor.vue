@@ -208,15 +208,15 @@ watch(() => props.categoryData, (newData) => {
 .category-editor {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 2px;
+  padding: 2px;
 }
 
 .editor-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
+  gap: 2px;
+  padding-bottom: 2px;
   border-bottom: 1px solid #404040;
 }
 
@@ -267,13 +267,13 @@ watch(() => props.categoryData, (newData) => {
 
 .form-section {
   background: #1e1e1e;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 2px;
+  border-radius: 4px;
   border: 1px solid #333;
 }
 
 .form-section h5 {
-  margin: 0 0 12px 0;
+  margin: 0 0 2px 0;
   color: #0d7dd8;
   font-size: 13px;
   font-weight: 600;

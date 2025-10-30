@@ -136,8 +136,8 @@ const tokenSource = computed(() => {
 }
 
 .form-section {
-  margin-bottom: 6px;
-  padding: 6px;
+  margin-bottom: 2px;
+  padding: 4px;
   background: #1e1e1e;
   border-radius: 6px;
   border: 1px solid #333;
@@ -145,7 +145,7 @@ const tokenSource = computed(() => {
 }
 
 .form-section h4 {
-  margin: 0 0 10px 0;
+  margin: 0 0 2px 0;
   color: #0d7dd8;
   font-size: 13px;
   font-weight: 600;

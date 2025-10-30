@@ -126,7 +126,7 @@ const formOps = useTokenEditorForm(props, state, category, pool, emit);
 }
 
 .editor-footer-embedded {
-  padding: 6px 10px;
+  padding: 6px 6px;
   border-top: 1px solid #404040;
   display: flex;
   justify-content: flex-end;
