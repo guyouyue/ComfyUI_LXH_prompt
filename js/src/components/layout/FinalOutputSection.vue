@@ -1,3 +1,4 @@
+<!--src/components/layout/FinalOutputSection.vue-->
 <template>
   <div class="final-output" @click="$emit('focus')">
     <!-- 头部 -->

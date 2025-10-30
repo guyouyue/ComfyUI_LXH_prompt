@@ -1,3 +1,4 @@
+<!--src/components/shared/TokenSelectorItem.vue-->
 <template>
   <div
     class="token-item"

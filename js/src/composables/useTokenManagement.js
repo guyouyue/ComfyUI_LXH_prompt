@@ -1,4 +1,4 @@
-// src/composables/useTokenManagement.js
+<!--src/composables/useTokenManagement.js-->
 import {computed} from 'vue';
 import {useAppStore} from './useAppStore.js';
 import {useTokens} from './useTokens.js';

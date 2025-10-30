@@ -1,4 +1,4 @@
-// src/composables/useAppStore.js
+<!--src/composables/useAppStore.js-->
 import {computed, ref} from 'vue';
 import {FOCUS_AREAS, LANGUAGES, OUTPUT_MODES} from '../utils/constants.js';
 

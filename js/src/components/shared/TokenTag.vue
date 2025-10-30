@@ -1,10 +1,11 @@
+<!--src/components/shared/TokenTag.vue-->
 <template>
   <div
-    class="token-tag"
-    :class="[token.source, { 'no-mapping': !token.mapping }]"
-    :title="tooltip"
-    @click="$emit('click', token)"
-    @dblclick.stop="$emit('dblclick', token)"
+      class="token-tag"
+      :class="[token.source, { 'no-mapping': !token.mapping }]"
+      :title="tooltip"
+      @click="$emit('click', token)"
+      @dblclick.stop="$emit('dblclick', token)"
   >
     <span class="token-text">{{ displayText }}</span>
     <span class="token-source-badge" :class="token.source">

@@ -1,3 +1,4 @@
+<!--src/composables/useTokenEditorForm.js-->
 import { watch } from 'vue';
 
 /**

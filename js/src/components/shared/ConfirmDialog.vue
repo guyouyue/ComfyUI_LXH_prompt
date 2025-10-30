@@ -1,3 +1,4 @@
+<!--src/components/shared/ConfirmDialog.vue-->
 <template>
   <Transition name="confirm-fade">
     <div v-if="show" class="confirm-overlay" @click.self="$emit('cancel')">

@@ -1,7 +1,8 @@
+<!--src/components/shared/PoolTokenItem.vue-->
 <template>
   <div
-    class="pool-token-item"
-    :class="{
+      class="pool-token-item"
+      :class="{
       'mapped-token': token.isReference,
       'editing-token': isEditing,
     }"
@@ -22,38 +23,38 @@
             <div class="weight-control" v-if="token.weight !== undefined">
               <label>权重:</label>
               <input
-                type="number"
-                :value="token.weight"
-                @input="$emit('update-weight', index, parseFloat($event.target.value))"
-                min="0"
-                max="10"
-                step="0.1"
-                class="weight-input"
+                  type="number"
+                  :value="token.weight"
+                  @input="$emit('update-weight', index, parseFloat($event.target.value))"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  class="weight-input"
               />
             </div>
 
             <button
-              v-if="!token.isReference"
-              class="edit-btn"
-              @click="$emit('edit', index)"
-              title="编辑此词元"
+                v-if="!token.isReference"
+                class="edit-btn"
+                @click="$emit('edit', index)"
+                title="编辑此词元"
             >
               编辑
             </button>
 
             <button
-              v-else
-              class="view-btn"
-              @click="$emit('view', token)"
-              title="查看引用的词元"
+                v-else
+                class="view-btn"
+                @click="$emit('view', token)"
+                title="查看引用的词元"
             >
               👁️ 查看
             </button>
 
             <button
-              class="delete-btn"
-              @click="$emit('remove', index)"
-              title="从池中移除"
+                class="delete-btn"
+                @click="$emit('remove', index)"
+                title="从池中移除"
             >
               🗑️
             </button>
@@ -114,21 +115,21 @@
           <div class="edit-group">
             <label>中文 (zh) *</label>
             <input
-              type="text"
-              :value="editData.zh"
-              @input="$emit('update:edit-data', { ...editData, zh: $event.target.value })"
-              placeholder="中文内容"
-              class="form-input"
+                type="text"
+                :value="editData.zh"
+                @input="$emit('update:edit-data', { ...editData, zh: $event.target.value })"
+                placeholder="中文内容"
+                class="form-input"
             />
           </div>
           <div class="edit-group">
             <label>英文 (en) *</label>
             <input
-              type="text"
-              :value="editData.en"
-              @input="$emit('update:edit-data', { ...editData, en: $event.target.value })"
-              placeholder="英文内容"
-              class="form-input"
+                type="text"
+                :value="editData.en"
+                @input="$emit('update:edit-data', { ...editData, en: $event.target.value })"
+                placeholder="英文内容"
+                class="form-input"
             />
           </div>
         </div>
@@ -137,23 +138,23 @@
           <div class="edit-group">
             <label>日文 (jp)</label>
             <input
-              type="text"
-              :value="editData.jp"
-              @input="$emit('update:edit-data', { ...editData, jp: $event.target.value })"
-              placeholder="日文内容"
-              class="form-input"
+                type="text"
+                :value="editData.jp"
+                @input="$emit('update:edit-data', { ...editData, jp: $event.target.value })"
+                placeholder="日文内容"
+                class="form-input"
             />
           </div>
           <div class="edit-group">
             <label>权重</label>
             <input
-              type="number"
-              :value="editData.weight"
-              @input="$emit('update:edit-data', { ...editData, weight: parseFloat($event.target.value) })"
-              min="0"
-              max="10"
-              step="0.1"
-              class="form-input"
+                type="number"
+                :value="editData.weight"
+                @input="$emit('update:edit-data', { ...editData, weight: parseFloat($event.target.value) })"
+                min="0"
+                max="10"
+                step="0.1"
+                class="form-input"
             />
           </div>
         </div>

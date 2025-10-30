@@ -1,3 +1,5 @@
+<!--src/utils/tokenParser.js-->
+
 /**
  * 词元解析工具
  */

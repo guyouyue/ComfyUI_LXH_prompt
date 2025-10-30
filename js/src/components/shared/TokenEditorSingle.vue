@@ -1,3 +1,4 @@
+<!--src/components/shared/TokenEditorSingle.vue-->
 <template>
   <div class="token-form">
     <!-- 基本信息 -->
@@ -7,12 +8,12 @@
         <div class="form-group">
           <label>词元ID *</label>
           <input
-            type="text"
-            :value="formData.id"
-            @input="$emit('update:form-data', { ...formData, id: $event.target.value })"
-            :disabled="isSystemToken"
-            placeholder="唯一标识符"
-            class="form-input"
+              type="text"
+              :value="formData.id"
+              @input="$emit('update:form-data', { ...formData, id: $event.target.value })"
+              :disabled="isSystemToken"
+              placeholder="唯一标识符"
+              class="form-input"
           />
           <span class="form-hint" v-if="isSystemToken">系统词元ID不可修改</span>
         </div>
@@ -33,31 +34,31 @@
         <div class="form-group">
           <label>中文 (zh)</label>
           <input
-            type="text"
-            :value="formData.zh"
-            @input="$emit('update:form-data', { ...formData, zh: $event.target.value })"
-            placeholder="中文词元内容"
-            class="form-input"
+              type="text"
+              :value="formData.zh"
+              @input="$emit('update:form-data', { ...formData, zh: $event.target.value })"
+              placeholder="中文词元内容"
+              class="form-input"
           />
         </div>
         <div class="form-group">
           <label>英文 (en)</label>
           <input
-            type="text"
-            :value="formData.en"
-            @input="$emit('update:form-data', { ...formData, en: $event.target.value })"
-            placeholder="英文词元内容"
-            class="form-input"
+              type="text"
+              :value="formData.en"
+              @input="$emit('update:form-data', { ...formData, en: $event.target.value })"
+              placeholder="英文词元内容"
+              class="form-input"
           />
         </div>
         <div class="form-group">
           <label>日文 (jp)</label>
           <input
-            type="text"
-            :value="formData.jp"
-            @input="$emit('update:form-data', { ...formData, jp: $event.target.value })"
-            placeholder="日文词元内容"
-            class="form-input"
+              type="text"
+              :value="formData.jp"
+              @input="$emit('update:form-data', { ...formData, jp: $event.target.value })"
+              placeholder="日文词元内容"
+              class="form-input"
           />
         </div>
       </div>
@@ -67,23 +68,23 @@
     <div class="form-section">
       <h4>📁 分类信息</h4>
       <CategorySelector
-        :category-id="formData.categoryId"
-        :subcategory-id="formData.subcategoryId"
-        :categories="categories"
-        :temp-categories="tempCategories"
-        :temp-subcategories="tempSubcategories"
-        :language="language"
-        :new-category-name="formData.newCategoryName"
-        :new-subcategory-name="formData.newSubcategoryName"
-        :get-subcategories="getSubcategories"
-        :get-category-name="getCategoryName"
-        :get-subcategory-name="getSubcategoryName"
-        @update:category-id="$emit('update:form-data', { ...formData, categoryId: $event })"
-        @update:subcategory-id="$emit('update:form-data', { ...formData, subcategoryId: $event })"
-        @update:new-category-name="$emit('update:form-data', { ...formData, newCategoryName: $event })"
-        @update:new-subcategory-name="$emit('update:form-data', { ...formData, newSubcategoryName: $event })"
-        @confirm-category="$emit('confirm-category', $event)"
-        @cancel-new="$emit('cancel-new')"
+          :category-id="formData.categoryId"
+          :subcategory-id="formData.subcategoryId"
+          :categories="categories"
+          :temp-categories="tempCategories"
+          :temp-subcategories="tempSubcategories"
+          :language="language"
+          :new-category-name="formData.newCategoryName"
+          :new-subcategory-name="formData.newSubcategoryName"
+          :get-subcategories="getSubcategories"
+          :get-category-name="getCategoryName"
+          :get-subcategory-name="getSubcategoryName"
+          @update:category-id="$emit('update:form-data', { ...formData, categoryId: $event })"
+          @update:subcategory-id="$emit('update:form-data', { ...formData, subcategoryId: $event })"
+          @update:new-category-name="$emit('update:form-data', { ...formData, newCategoryName: $event })"
+          @update:new-subcategory-name="$emit('update:form-data', { ...formData, newSubcategoryName: $event })"
+          @confirm-category="$emit('confirm-category', $event)"
+          @cancel-new="$emit('cancel-new')"
       />
     </div>
 
@@ -91,18 +92,18 @@
     <div class="form-section" v-if="formData.description !== undefined">
       <h4>📝 描述信息</h4>
       <textarea
-        :value="formData.description"
-        @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
-        placeholder="词元描述..."
-        class="form-textarea"
-        rows="3"
+          :value="formData.description"
+          @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
+          placeholder="词元描述..."
+          class="form-textarea"
+          rows="3"
       ></textarea>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import {computed} from 'vue';
 import CategorySelector from './CategorySelector.vue';
 
 const props = defineProps({

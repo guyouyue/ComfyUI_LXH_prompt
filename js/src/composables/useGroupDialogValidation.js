@@ -1,4 +1,5 @@
-import { computed } from 'vue';
+<!--src/composables/useGroupDialogValidation.js-->
+import {computed} from 'vue';
 
 /**
  * GroupDialog 验证逻辑

@@ -1,3 +1,4 @@
+<!--src/components/shared/TokenEditorPool.vue-->
 <template>
   <div class="pool-form">
     <!-- 词元池头部 -->
@@ -16,21 +17,21 @@
         <div class="form-group">
           <label>池名称 (中文)</label>
           <input
-            type="text"
-            :value="formData.name.zh"
-            @input="updateName('zh', $event.target.value)"
-            placeholder="中文名称"
-            class="form-input"
+              type="text"
+              :value="formData.name.zh"
+              @input="updateName('zh', $event.target.value)"
+              placeholder="中文名称"
+              class="form-input"
           />
         </div>
         <div class="form-group">
           <label>池名称 (英文)</label>
           <input
-            type="text"
-            :value="formData.name.en"
-            @input="updateName('en', $event.target.value)"
-            placeholder="英文名称"
-            class="form-input"
+              type="text"
+              :value="formData.name.en"
+              @input="updateName('en', $event.target.value)"
+              placeholder="英文名称"
+              class="form-input"
           />
         </div>
       </div>
@@ -38,11 +39,11 @@
       <div class="form-group">
         <label>描述信息</label>
         <textarea
-          :value="formData.description"
-          @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
-          placeholder="词元池描述..."
-          class="form-textarea"
-          rows="2"
+            :value="formData.description"
+            @input="$emit('update:form-data', { ...formData, description: $event.target.value })"
+            placeholder="词元池描述..."
+            class="form-textarea"
+            rows="2"
         ></textarea>
       </div>
     </div>
@@ -52,20 +53,20 @@
       <h4>📋 词元列表</h4>
       <div class="token-list">
         <PoolTokenItem
-          v-for="(token, index) in poolTokens"
-          :key="token.id || index"
-          :token="token"
-          :index="index"
-          :is-editing="editingPoolTokenIndex === index"
-          :edit-data="editingPoolTokenData"
-          :get-language-value="getTokenLanguageValue"
-          @update-weight="handleUpdateWeight"
-          @edit="$emit('start-edit', index)"
-          @view="$emit('view-token', $event)"
-          @remove="$emit('remove-token', index)"
-          @update:edit-data="$emit('update:edit-data', $event)"
-          @save-edit="$emit('save-edit')"
-          @cancel-edit="$emit('cancel-edit')"
+            v-for="(token, index) in poolTokens"
+            :key="token.id || index"
+            :token="token"
+            :index="index"
+            :is-editing="editingPoolTokenIndex === index"
+            :edit-data="editingPoolTokenData"
+            :get-language-value="getTokenLanguageValue"
+            @update-weight="handleUpdateWeight"
+            @edit="$emit('start-edit', index)"
+            @view="$emit('view-token', $event)"
+            @remove="$emit('remove-token', index)"
+            @update:edit-data="$emit('update:edit-data', $event)"
+            @save-edit="$emit('save-edit')"
+            @cancel-edit="$emit('cancel-edit')"
         />
       </div>
     </div>
@@ -95,13 +96,13 @@ const emit = defineEmits([
 ]);
 
 const updateName = (lang, value) => {
-  const newName = { ...props.formData.name, [lang]: value };
-  emit('update:form-data', { ...props.formData, name: newName });
+  const newName = {...props.formData.name, [lang]: value};
+  emit('update:form-data', {...props.formData, name: newName});
 };
 
 const handleUpdateWeight = (index, weight) => {
   const newTokens = [...props.poolTokens];
-  newTokens[index] = { ...newTokens[index], weight };
+  newTokens[index] = {...newTokens[index], weight};
   emit('update:pool-tokens', newTokens);
 };
 </script>

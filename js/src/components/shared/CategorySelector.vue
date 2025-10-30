@@ -1,3 +1,4 @@
+<!--src/components/shared/CategorySelector.vue-->
 <template>
   <div class="category-selector">
     <div class="form-row">
@@ -5,15 +6,15 @@
         <label>一级分类 {{ required ? '*' : '' }}</label>
         <div class="category-input-container">
           <select
-            v-model="localCategoryId"
-            class="form-select"
-            :required="required"
+              v-model="localCategoryId"
+              class="form-select"
+              :required="required"
           >
             <option value="">请选择分类</option>
             <option
-              v-for="category in mergedCategories"
-              :key="category.id"
-              :value="category.id"
+                v-for="category in mergedCategories"
+                :key="category.id"
+                :value="category.id"
             >
               {{ getCategoryName(category) }}
               {{ category.isTemp ? ' (新建)' : '' }}
@@ -21,12 +22,12 @@
             <option v-if="allowNew" value="__new__">➕ 新建分类</option>
           </select>
           <input
-            v-if="localCategoryId === '__new__'"
-            type="text"
-            v-model="newCategoryName"
-            placeholder="输入新分类名称"
-            class="form-input new-category-input"
-            @keydown.enter="$emit('confirm-category', 'category')"
+              v-if="localCategoryId === '__new__'"
+              type="text"
+              v-model="newCategoryName"
+              placeholder="输入新分类名称"
+              class="form-input new-category-input"
+              @keydown.enter="$emit('confirm-category', 'category')"
           />
         </div>
       </div>
@@ -35,16 +36,16 @@
         <label>二级分类 {{ required ? '*' : '' }}</label>
         <div class="category-input-container">
           <select
-            v-model="localSubcategoryId"
-            :disabled="!localCategoryId || localCategoryId === '__new__'"
-            class="form-select"
-            :required="required"
+              v-model="localSubcategoryId"
+              :disabled="!localCategoryId || localCategoryId === '__new__'"
+              class="form-select"
+              :required="required"
           >
             <option value="">请选择子分类</option>
             <option
-              v-for="subcategory in currentSubcategories"
-              :key="subcategory.id"
-              :value="subcategory.id"
+                v-for="subcategory in currentSubcategories"
+                :key="subcategory.id"
+                :value="subcategory.id"
             >
               {{ getSubcategoryName(subcategory) }}
               {{ subcategory.isTemp ? ' (新建)' : '' }}
@@ -52,12 +53,12 @@
             <option v-if="allowNew" value="__new__">➕ 新建子分类</option>
           </select>
           <input
-            v-if="localSubcategoryId === '__new__'"
-            type="text"
-            v-model="newSubcategoryName"
-            placeholder="输入新子分类名称"
-            class="form-input new-category-input"
-            @keydown.enter="$emit('confirm-category', 'subcategory')"
+              v-if="localSubcategoryId === '__new__'"
+              type="text"
+              v-model="newSubcategoryName"
+              placeholder="输入新子分类名称"
+              class="form-input new-category-input"
+              @keydown.enter="$emit('confirm-category', 'subcategory')"
           />
         </div>
       </div>
@@ -65,13 +66,13 @@
 
     <!-- 新建分类按钮 -->
     <div
-      v-if="showNewCategoryButtons"
-      class="new-category-actions"
+        v-if="showNewCategoryButtons"
+        class="new-category-actions"
     >
       <button
-        class="btn-confirm-new"
-        @click="handleConfirmNew"
-        :disabled="!canConfirmNew"
+          class="btn-confirm-new"
+          @click="handleConfirmNew"
+          :disabled="!canConfirmNew"
       >
         ✅ 确认新建{{ localCategoryId === '__new__' ? '一级分类' : '二级分类' }}
       </button>
@@ -83,7 +84,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import {computed} from 'vue';
 
 const props = defineProps({
   categoryId: String,

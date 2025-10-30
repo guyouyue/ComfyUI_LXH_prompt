@@ -1,3 +1,4 @@
+<!--src/components/layout/TokenPoolSection.vue-->
 <template>
   <div class="token-pool" :class="{ focused }">
     <!-- 头部 -->
@@ -79,14 +80,14 @@ watch(() => props.categories, (newVal) => {
     length: newVal?.length,
     data: newVal
   });
-}, { immediate: true, deep: true });
+}, {immediate: true, deep: true});
 
 watch(() => props.customGroups, (newVal) => {
   console.log('[TokenPoolSection] customGroups 更新:', {
     length: newVal?.length,
     data: newVal
   });
-}, { immediate: true, deep: true });
+}, {immediate: true, deep: true});
 
 const emit = defineEmits([
   'token-click',

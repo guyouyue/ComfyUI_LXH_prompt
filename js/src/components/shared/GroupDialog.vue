@@ -1,3 +1,4 @@
+<!--src/components/shared/GroupDialog.vue-->
 <template>
   <div class="dialog-overlay" @click.self="handleClose">
     <div class="dialog-content">
@@ -17,15 +18,15 @@
             <span class="required">*</span>
           </label>
           <input
-            ref="idInputRef"
-            type="text"
-            v-model="state.formData.value.id"
-            :disabled="isEdit"
-            placeholder="例如: hair_color_01"
-            class="form-input"
-            :class="{ error: validation.idError.value && !isEdit }"
-            @keydown.enter="handleConfirm"
-            @keydown.esc="handleClose"
+              ref="idInputRef"
+              type="text"
+              v-model="state.formData.value.id"
+              :disabled="isEdit"
+              placeholder="例如: hair_color_01"
+              class="form-input"
+              :class="{ error: validation.idError.value && !isEdit }"
+              @keydown.enter="handleConfirm"
+              @keydown.esc="handleClose"
           />
           <span class="form-hint" :class="{ error: validation.idError.value && !isEdit }">
             {{ validation.idError.value || '用于在提示词中引用此组合（仅支持字母、数字、下划线和连字符）' }}
@@ -35,11 +36,11 @@
         <div class="form-group">
           <label>描述</label>
           <textarea
-            v-model="state.formData.value.description"
-            placeholder="说明这个组合的用途..."
-            class="form-textarea"
-            rows="3"
-            @keydown.esc="handleClose"
+              v-model="state.formData.value.description"
+              placeholder="说明这个组合的用途..."
+              class="form-textarea"
+              rows="3"
+              @keydown.esc="handleClose"
           ></textarea>
           <span class="form-hint">选填：帮助您记住这个组合的作用</span>
         </div>
@@ -49,10 +50,10 @@
       <div class="dialog-footer">
         <button @click="handleClose">取消 (ESC)</button>
         <button
-          class="primary"
-          @click="handleConfirm"
-          :disabled="!validation.isValid.value"
-          :title="validation.isValid.value ? '' : '请填写必填字段'"
+            class="primary"
+            @click="handleConfirm"
+            :disabled="!validation.isValid.value"
+            :title="validation.isValid.value ? '' : '请填写必填字段'"
         >
           {{ isEdit ? '保存' : '创建' }}
         </button>
@@ -62,9 +63,9 @@
 </template>
 
 <script setup>
-import { onMounted, nextTick, ref, toRef } from 'vue';
-import { useGroupDialogState } from '../../composables/useGroupDialogState.js';
-import { useGroupDialogValidation } from '../../composables/useGroupDialogValidation.js';
+import {nextTick, onMounted, ref} from 'vue';
+import {useGroupDialogState} from '../../composables/useGroupDialogState.js';
+import {useGroupDialogValidation} from '../../composables/useGroupDialogValidation.js';
 
 const props = defineProps({
   group: {
@@ -106,7 +107,7 @@ const handleConfirm = () => {
     return;
   }
 
-  emit('confirm', { ...state.formData.value });
+  emit('confirm', {...state.formData.value});
   handleClose();
 };
 

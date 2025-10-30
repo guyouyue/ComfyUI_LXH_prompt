@@ -1,4 +1,4 @@
-// src/composables/useAppKeyboard.js
+<!--src/composables/useAppKeyboard.js-->
 import {FOCUS_AREAS} from '../utils/constants.js';
 
 export function useAppKeyboard(store, handlers) {

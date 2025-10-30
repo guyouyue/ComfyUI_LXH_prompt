@@ -1,22 +1,23 @@
+<!--src/components/shared/OutputTokenTag.vue-->
 <template>
   <component
-    :is="isEditing ? 'input' : 'span'"
-    v-bind="componentProps"
-    :class="componentClasses"
-    :style="componentStyle"
-    @mousedown="!isEditing && $emit('mousedown', $event)"
-    @touchstart="!isEditing && $emit('touchstart', $event)"
-    @click="!isEditing && $emit('click', $event)"
-    @keydown.enter.prevent="isEditing && $emit('edit-confirm')"
-    @keydown.esc.prevent="isEditing && $emit('edit-cancel')"
-    @blur="isEditing && $emit('edit-blur')"
+      :is="isEditing ? 'input' : 'span'"
+      v-bind="componentProps"
+      :class="componentClasses"
+      :style="componentStyle"
+      @mousedown="!isEditing && $emit('mousedown', $event)"
+      @touchstart="!isEditing && $emit('touchstart', $event)"
+      @click="!isEditing && $emit('click', $event)"
+      @keydown.enter.prevent="isEditing && $emit('edit-confirm')"
+      @keydown.esc.prevent="isEditing && $emit('edit-cancel')"
+      @blur="isEditing && $emit('edit-blur')"
   >
     <template v-if="!isEditing">
       {{ displayText }}
       <button
-        class="token-remove"
-        @click.stop="$emit('remove')"
-        title="删除"
+          class="token-remove"
+          @click.stop="$emit('remove')"
+          title="删除"
       >
         ×
       </button>
@@ -25,7 +26,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import {computed} from 'vue';
 
 const props = defineProps({
   token: {
@@ -120,7 +121,7 @@ const componentClasses = computed(() => {
 
 const componentStyle = computed(() => {
   if (props.isLongPressActive) {
-    return { '--long-press-progress': `${props.longPressProgress}%` };
+    return {'--long-press-progress': `${props.longPressProgress}%`};
   }
   return {};
 });

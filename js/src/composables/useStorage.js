@@ -1,5 +1,6 @@
-import { ref } from 'vue';
-import { STORAGE_KEYS, DEFAULT_CONFIG } from '../utils/constants.js';
+<!--src/composables/useStorage.js-->
+import {ref} from 'vue';
+import {DEFAULT_CONFIG, STORAGE_KEYS} from '../utils/constants.js';
 
 /**
  * 本地存储管理

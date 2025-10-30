@@ -1,56 +1,57 @@
+<!--src/components/layout/TokenEditorSection.vue-->
 <template>
   <div class="token-editor-embedded">
     <div class="editor-body-embedded">
       <!-- 单个词元编辑 -->
       <TokenEditorSingle
-        v-if="tokenType === 'single'"
-        :form-data="state.formData.value"
-        :is-system-token="state.isSystemToken.value"
-        :categories="categories"
-        :temp-categories="state.tempCategories.value"
-        :temp-subcategories="state.tempSubcategories.value"
-        :language="language"
-        :get-category-name="category.getCategoryName"
-        :get-subcategory-name="category.getSubcategoryName"
-        :get-subcategories="category.getSubcategories"
-        @update:form-data="state.formData.value = $event"
-        @confirm-category="category.confirmNewCategory"
-        @cancel-new="category.cancelNewCategory"
+          v-if="tokenType === 'single'"
+          :form-data="state.formData.value"
+          :is-system-token="state.isSystemToken.value"
+          :categories="categories"
+          :temp-categories="state.tempCategories.value"
+          :temp-subcategories="state.tempSubcategories.value"
+          :language="language"
+          :get-category-name="category.getCategoryName"
+          :get-subcategory-name="category.getSubcategoryName"
+          :get-subcategories="category.getSubcategories"
+          @update:form-data="state.formData.value = $event"
+          @confirm-category="category.confirmNewCategory"
+          @cancel-new="category.cancelNewCategory"
       />
 
       <!-- 未映射词元编辑 -->
       <TokenEditorUnmapped
-        v-else-if="tokenType === 'unmapped'"
-        :form-data="state.formData.value"
-        :original-value="state.originalValue.value"
-        :categories="categories"
-        :temp-categories="state.tempCategories.value"
-        :temp-subcategories="state.tempSubcategories.value"
-        :language="language"
-        :get-category-name="category.getCategoryName"
-        :get-subcategory-name="category.getSubcategoryName"
-        :get-subcategories="category.getSubcategories"
-        @update:form-data="state.formData.value = $event"
-        @confirm-category="category.confirmNewCategory"
-        @cancel-new="category.cancelNewCategory"
+          v-else-if="tokenType === 'unmapped'"
+          :form-data="state.formData.value"
+          :original-value="state.originalValue.value"
+          :categories="categories"
+          :temp-categories="state.tempCategories.value"
+          :temp-subcategories="state.tempSubcategories.value"
+          :language="language"
+          :get-category-name="category.getCategoryName"
+          :get-subcategory-name="category.getSubcategoryName"
+          :get-subcategories="category.getSubcategories"
+          @update:form-data="state.formData.value = $event"
+          @confirm-category="category.confirmNewCategory"
+          @cancel-new="category.cancelNewCategory"
       />
 
       <!-- 词元池编辑 -->
       <TokenEditorPool
-        v-else-if="tokenType === 'pool'"
-        :form-data="state.formData.value"
-        :pool-tokens="state.poolTokens.value"
-        :editing-pool-token-index="state.editingPoolTokenIndex.value"
-        :editing-pool-token-data="state.editingPoolTokenData.value"
-        :get-token-language-value="pool.getTokenLanguageValue"
-        @update:form-data="state.formData.value = $event"
-        @update:pool-tokens="state.poolTokens.value = $event"
-        @update:edit-data="state.editingPoolTokenData.value = $event"
-        @start-edit="pool.startEditPoolToken"
-        @save-edit="pool.saveEditPoolToken"
-        @cancel-edit="pool.cancelEditPoolToken"
-        @view-token="pool.viewReferencedToken"
-        @remove-token="pool.removePoolToken"
+          v-else-if="tokenType === 'pool'"
+          :form-data="state.formData.value"
+          :pool-tokens="state.poolTokens.value"
+          :editing-pool-token-index="state.editingPoolTokenIndex.value"
+          :editing-pool-token-data="state.editingPoolTokenData.value"
+          :get-token-language-value="pool.getTokenLanguageValue"
+          @update:form-data="state.formData.value = $event"
+          @update:pool-tokens="state.poolTokens.value = $event"
+          @update:edit-data="state.editingPoolTokenData.value = $event"
+          @start-edit="pool.startEditPoolToken"
+          @save-edit="pool.saveEditPoolToken"
+          @cancel-edit="pool.cancelEditPoolToken"
+          @view-token="pool.viewReferencedToken"
+          @remove-token="pool.removePoolToken"
       />
     </div>
 
@@ -68,11 +69,11 @@
 import TokenEditorSingle from '../shared/TokenEditorSingle.vue';
 import TokenEditorUnmapped from '../shared/TokenEditorUnmapped.vue';
 import TokenEditorPool from '../shared/TokenEditorPool.vue';
-import { useTokenEditorState } from '../../composables/useTokenEditorState.js';
-import { useTokenEditorValidation } from '../../composables/useTokenEditorValidation.js';
-import { useTokenEditorCategory } from '../../composables/useTokenEditorCategory.js';
-import { useTokenEditorPool } from '../../composables/useTokenEditorPool.js';
-import { useTokenEditorForm } from '../../composables/useTokenEditorForm.js';
+import {useTokenEditorState} from '../../composables/useTokenEditorState.js';
+import {useTokenEditorValidation} from '../../composables/useTokenEditorValidation.js';
+import {useTokenEditorCategory} from '../../composables/useTokenEditorCategory.js';
+import {useTokenEditorPool} from '../../composables/useTokenEditorPool.js';
+import {useTokenEditorForm} from '../../composables/useTokenEditorForm.js';
 
 const props = defineProps({
   token: Object,

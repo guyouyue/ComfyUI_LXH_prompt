@@ -1,4 +1,5 @@
-import { computed } from 'vue';
+<!--src/composables/useTokenEditorValidation.js-->
+import {computed} from 'vue';
 
 /**
  * TokenEditor 验证逻辑

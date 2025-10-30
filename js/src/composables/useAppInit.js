@@ -1,4 +1,4 @@
-// src/composables/useAppInit.js
+<!--src/composables/useAppInit.js-->
 import {useAppStore} from './useAppStore.js';
 import {useStorage} from './useStorage.js';
 import {getAllTokensFlat, parseTextToTokens} from '../utils/tokenParser.js';

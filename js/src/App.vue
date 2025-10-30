@@ -1,3 +1,4 @@
+<!--src/app.vue-->
 <script setup>
 import {computed, onMounted, onUnmounted, ref} from 'vue';
 

@@ -1,4 +1,4 @@
-// src/composables/useCustomGroups.js
+<!--src/composables/useCustomGroups.js-->
 import {ref} from 'vue';
 import {getSaveUserDataPath, getUserDataPath} from '../utils/pathHelper.js';
 

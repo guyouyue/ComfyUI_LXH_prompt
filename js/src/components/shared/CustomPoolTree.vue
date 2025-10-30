@@ -1,3 +1,4 @@
+<!--src/components/shared/CustomPoolTree.vue-->
 <template>
   <div v-if="hasCustomGroups && (groups.length > 0 || !isSearching)" class="category custom-category">
     <!-- 一级分类标题 -->
@@ -11,14 +12,14 @@
     <!-- 二级分组内容 -->
     <div v-show="isExpanded" class="category-content">
       <div
-        v-for="group in groups"
-        :key="group.id"
-        class="subcategory custom-group"
+          v-for="group in groups"
+          :key="group.id"
+          class="subcategory custom-group"
       >
         <!-- 二级分组标题 -->
         <div
-          class="subcategory-header"
-          @click.stop="$emit('toggle-group', group.id)"
+            class="subcategory-header"
+            @click.stop="$emit('toggle-group', group.id)"
         >
           <span class="subcategory-icon">{{ isGroupExpanded(group.id) ? '▼' : '▶' }}</span>
           <span class="subcategory-title">{{ getGroupName(group) }}</span>
@@ -29,13 +30,13 @@
         <div v-show="isGroupExpanded(group.id)" class="token-list-container">
           <div class="pool-items-grid">
             <PoolItemTag
-              v-for="poolItem in group.pool"
-              :key="poolItem.id"
-              :pool-item="poolItem"
-              :display-name="getPoolItemName(poolItem)"
-              :tooltip="getPoolItemTooltip(poolItem)"
-              @click="$emit('pool-item-click', poolItem)"
-              @dblclick="$emit('pool-item-dblclick', poolItem)"
+                v-for="poolItem in group.pool"
+                :key="poolItem.id"
+                :pool-item="poolItem"
+                :display-name="getPoolItemName(poolItem)"
+                :tooltip="getPoolItemTooltip(poolItem)"
+                @click="$emit('pool-item-click', poolItem)"
+                @dblclick="$emit('pool-item-dblclick', poolItem)"
             />
           </div>
         </div>

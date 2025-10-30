@@ -1,3 +1,4 @@
+<!--src/components/shared/TokenSelector.vue-->
 <template>
   <div class="token-selector-overlay" @click.self="handleClose">
     <div class="token-selector-content">
@@ -14,12 +15,12 @@
         <!-- 搜索框 -->
         <div class="search-box">
           <input
-            ref="searchInputRef"
-            type="text"
-            v-model="state.searchQuery.value"
-            placeholder="搜索词元（支持中文、英文、分类）..."
-            class="search-input"
-            @keydown.esc="handleClose"
+              ref="searchInputRef"
+              type="text"
+              v-model="state.searchQuery.value"
+              placeholder="搜索词元（支持中文、英文、分类）..."
+              class="search-input"
+              @keydown.esc="handleClose"
           />
           <span v-if="search.isSearching.value" class="search-hint">
             找到 {{ search.filteredTokens.value.length }} 个结果
@@ -29,12 +30,12 @@
         <!-- 词元列表 -->
         <div class="token-list">
           <TokenSelectorItem
-            v-for="token in search.filteredTokens.value"
-            :key="token.id"
-            :token="token"
-            :language="language"
-            :search-query="state.searchQuery.value"
-            @select="handleSelect"
+              v-for="token in search.filteredTokens.value"
+              :key="token.id"
+              :token="token"
+              :language="language"
+              :search-query="state.searchQuery.value"
+              @select="handleSelect"
           />
 
           <!-- 空状态 -->
@@ -64,10 +65,10 @@
 </template>
 
 <script setup>
-import { toRef, onMounted, nextTick, ref } from 'vue';
+import {nextTick, onMounted, ref, toRef} from 'vue';
 import TokenSelectorItem from './TokenSelectorItem.vue';
-import { useTokenSelectorState } from '../../composables/useTokenSelectorState.js';
-import { useTokenSelectorSearch } from '../../composables/useTokenSelectorSearch.js';
+import {useTokenSelectorState} from '../../composables/useTokenSelectorState.js';
+import {useTokenSelectorSearch} from '../../composables/useTokenSelectorSearch.js';
 
 const props = defineProps({
   allTokens: {

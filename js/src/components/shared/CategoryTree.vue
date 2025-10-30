@@ -1,13 +1,14 @@
+<!--src/components/shared/CategoryTree.vue-->
 <template>
   <div
-    v-for="category in categories"
-    :key="category.id"
-    class="category"
+      v-for="category in categories"
+      :key="category.id"
+      class="category"
   >
     <!-- 一级分类标题 -->
     <div
-      class="category-header"
-      @click="$emit('toggle-category', category.id)"
+        class="category-header"
+        @click="$emit('toggle-category', category.id)"
     >
       <span class="category-icon">{{ isExpanded(category.id) ? '▼' : '▶' }}</span>
       <span class="category-title">{{ getCategoryName(category) }}</span>
@@ -17,24 +18,24 @@
     <!-- 二级分类内容 -->
     <div v-show="isExpanded(category.id)" class="category-content">
       <div
-        v-for="subcategory in category.subcategories"
-        :key="subcategory.id"
-        class="subcategory"
+          v-for="subcategory in category.subcategories"
+          :key="subcategory.id"
+          class="subcategory"
       >
         <!-- 二级分类标题 -->
         <div
-          class="subcategory-header"
-          @click.stop="$emit('toggle-subcategory', category.id, subcategory.id)"
+            class="subcategory-header"
+            @click.stop="$emit('toggle-subcategory', category.id, subcategory.id)"
         >
           <span class="subcategory-icon">{{
-            isSubcategoryExpanded(category.id, subcategory.id) ? '▼' : '▶'
-          }}</span>
+              isSubcategoryExpanded(category.id, subcategory.id) ? '▼' : '▶'
+            }}</span>
           <span class="subcategory-title">{{ getSubcategoryName(subcategory) }}</span>
           <span class="subcategory-count">({{ subcategory.tokens.length }})</span>
           <button
-            class="add-token-btn"
-            @click.stop="$emit('add-token', category, subcategory)"
-            title="添加新词元"
+              class="add-token-btn"
+              @click.stop="$emit('add-token', category, subcategory)"
+              title="添加新词元"
           >
             +
           </button>
@@ -42,18 +43,18 @@
 
         <!-- 词元列表 -->
         <div
-          v-show="isSubcategoryExpanded(category.id, subcategory.id)"
-          class="token-list-container"
+            v-show="isSubcategoryExpanded(category.id, subcategory.id)"
+            class="token-list-container"
         >
           <div class="token-tags-grid">
             <TokenTag
-              v-for="token in subcategory.tokens"
-              :key="token.id"
-              :token="token"
-              :display-text="getDisplayText(token)"
-              :tooltip="getTokenTooltip(token)"
-              @click="$emit('token-click', token)"
-              @dblclick="$emit('token-dblclick', token)"
+                v-for="token in subcategory.tokens"
+                :key="token.id"
+                :token="token"
+                :display-text="getDisplayText(token)"
+                :tooltip="getTokenTooltip(token)"
+                @click="$emit('token-click', token)"
+                @dblclick="$emit('token-dblclick', token)"
             />
           </div>
         </div>

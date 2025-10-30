@@ -1,9 +1,10 @@
+<!--src/components/shared/PoolItemTag.vue-->
 <template>
   <div
-    class="pool-item-tag"
-    :title="tooltip"
-    @click="$emit('click', poolItem)"
-    @dblclick.stop="$emit('dblclick', poolItem)"
+      class="pool-item-tag"
+      :title="tooltip"
+      @click="$emit('click', poolItem)"
+      @dblclick.stop="$emit('dblclick', poolItem)"
   >
     <span class="pool-item-icon">🎲</span>
     <span class="pool-item-text">{{ displayName }}</span>

@@ -1,3 +1,4 @@
+<!--src/components/shared/TokenEditorUnmapped.vue-->
 <template>
   <div class="unmapped-form">
     <!-- 警告横幅 -->
