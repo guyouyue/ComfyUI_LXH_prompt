@@ -26,7 +26,6 @@
           :get-pool-item-name="operations.getPoolItemName"
           :get-pool-item-tooltip="operations.getPoolItemTooltip"
           @toggle-category="handleToggleCustomPoolCategory"
-          @toggle-group="state.toggleCustomGroup"
           @pool-item-click="operations.handlePoolItemClick"
           @pool-item-dblclick="operations.handlePoolItemDoubleClick"
           @group-click="$emit('group-click', $event)"
@@ -43,7 +42,6 @@
           :get-token-tooltip="operations.getTokenTooltip"
           :get-category-token-count="operations.getCategoryTokenCount"
           @toggle-category="handleToggleCategory"
-          @toggle-subcategory="state.toggleSubcategory"
           @token-click="operations.handleTokenClick"
           @token-dblclick="operations.handleTokenDoubleClick"
           @add-token="(category, subcategory) => $emit('add-token', category, subcategory)"
@@ -76,21 +74,6 @@ const props = defineProps({
   language: String,
   focused: Boolean,
 });
-
-// ⭐ 添加调试 watch
-watch(() => props.categories, (newVal) => {
-  console.log('[TokenPoolSection] categories 更新:', {
-    length: newVal?.length,
-    data: newVal
-  });
-}, {immediate: true, deep: true});
-
-watch(() => props.customGroups, (newVal) => {
-  console.log('[TokenPoolSection] customGroups 更新:', {
-    length: newVal?.length,
-    data: newVal
-  });
-}, {immediate: true, deep: true});
 
 const emit = defineEmits([
   'token-click',

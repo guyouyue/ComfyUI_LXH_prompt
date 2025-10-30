@@ -23,11 +23,11 @@
       </div>
     </div>
 
-    <!-- 原始输入区域 -->
+    <!-- 映射查看区域 -->
     <div class="output-section original-section">
       <div class="section-header">
         <div class="section-title-wrapper">
-          <span class="section-title">📋 原始输入</span>
+          <span class="section-title">📋 映射查看</span>
           <span class="section-subtitle">（多种语言混合）</span>
         </div>
         <div class="section-controls">

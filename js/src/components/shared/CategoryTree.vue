@@ -15,8 +15,8 @@
       </span>
       <span
           class="category-title"
-          @click="$emit('category-click', category)"
-          title="单击编辑分类"
+          @click="handleCategoryClick(category)"
+          title="单击编辑分类并展开/收起"
       >
         {{ getCategoryName(category) }}
       </span>
@@ -30,14 +30,9 @@
           :key="subcategory.id"
           class="subcategory"
       >
-        <!-- 二级分类标题 - ⭐ 修改点击逻辑 -->
+        <!-- 二级分类标题-->
         <div class="subcategory-header">
-          <span
-              class="subcategory-icon"
-              @click.stop="$emit('toggle-subcategory', category.id, subcategory.id)"
-          >
-            {{ isSubcategoryExpanded(category.id, subcategory.id) ? '▼' : '▶' }}
-          </span>
+          <span class="subcategory-icon always-expanded">▼</span>
           <span
               class="subcategory-title"
               @click.stop="$emit('subcategory-click', { category, subcategory })"
@@ -55,11 +50,7 @@
           </button>
         </div>
 
-        <!-- 词元列表 -->
-        <div
-            v-show="isSubcategoryExpanded(category.id, subcategory.id)"
-            class="token-list-container"
-        >
+        <div class="token-list-container">
           <div class="token-tags-grid">
             <TokenTag
                 v-for="token in subcategory.tokens"
@@ -91,9 +82,8 @@ const props = defineProps({
   getCategoryTokenCount: Function,
 });
 
-defineEmits([
+const emit = defineEmits([
   'toggle-category',
-  'toggle-subcategory',
   'token-click',
   'token-dblclick',
   'add-token',
@@ -101,13 +91,18 @@ defineEmits([
   'subcategory-click',
 ]);
 
+// ⭐ 新增：处理一级分类点击（同时触发编辑和展开/收起）
+const handleCategoryClick = (category) => {
+  // 先触发编辑事件
+  emit('category-click', category);
+  // 再触发展开/收起事件
+  emit('toggle-category', category.id);
+};
+
 const isExpanded = (categoryId) => {
   return props.expandedCategories.has(categoryId);
 };
 
-const isSubcategoryExpanded = (categoryId, subcategoryId) => {
-  return props.expandedSubcategories.has(`${categoryId}-${subcategoryId}`);
-};
 </script>
 
 <style scoped>
@@ -140,11 +135,23 @@ const isSubcategoryExpanded = (categoryId, subcategoryId) => {
   transition: transform 0.2s;
 }
 
+/* ⭐ 新增：永久展开的图标样式 */
+.subcategory-icon.always-expanded {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
 .category-title {
   color: #fafafa;
   font-weight: 600;
   font-size: 13px;
   flex: 1;
+  cursor: pointer;
+}
+
+.category-title:hover {
+  color: #0d7dd8;
 }
 
 .category-count {
@@ -177,7 +184,6 @@ const isSubcategoryExpanded = (categoryId, subcategoryId) => {
   padding: 6px 10px;
   background: #232323;
   border-radius: 4px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -194,6 +200,11 @@ const isSubcategoryExpanded = (categoryId, subcategoryId) => {
   color: #ddd;
   font-size: 12px;
   flex: 1;
+  cursor: pointer;
+}
+
+.subcategory-title:hover {
+  color: #0d7dd8;
 }
 
 .subcategory-count {
@@ -244,16 +255,5 @@ const isSubcategoryExpanded = (categoryId, subcategoryId) => {
   flex-wrap: wrap;
   gap: 6px;
   align-items: flex-start;
-}
-
-
-.category-title,
-.subcategory-title {
-  cursor: pointer; /* ⭐ 新增 */
-}
-
-.category-title:hover,
-.subcategory-title:hover {
-  color: #0d7dd8; /* ⭐ 新增：鼠标悬停高亮 */
 }
 </style>

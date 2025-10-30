@@ -2,9 +2,20 @@
 <template>
   <div v-if="hasCustomGroups && (groups.length > 0 || !isSearching)" class="category custom-category">
     <!-- 一级分类标题 -->
-    <div class="category-header" @click="$emit('toggle-category')">
-      <span class="category-icon">{{ isExpanded ? '▼' : '▶' }}</span>
-      <span class="category-title">自定义词元池</span>
+    <div class="category-header">
+      <span
+          class="category-icon"
+          @click.stop="$emit('toggle-category')"
+      >
+        {{ isExpanded ? '▼' : '▶' }}
+      </span>
+      <span
+          class="category-title"
+          @click="handleCategoryClick"
+          title="单击展开/收起"
+      >
+        自定义词元池
+      </span>
       <span class="category-count">({{ totalCount }})</span>
       <span class="category-source custom">🎲</span>
     </div>
@@ -16,14 +27,8 @@
           :key="group.id"
           class="subcategory custom-group"
       >
-        <!-- 二级分组标题 - ⭐ 修改点击逻辑 -->
         <div class="subcategory-header">
-          <span
-              class="subcategory-icon"
-              @click.stop="$emit('toggle-group', group.id)"
-          >
-            {{ isGroupExpanded(group.id) ? '▼' : '▶' }}
-          </span>
+          <span class="subcategory-icon always-expanded">▼</span>
           <span
               class="subcategory-title"
               @click.stop="$emit('group-click', group)"
@@ -34,8 +39,8 @@
           <span class="subcategory-count">({{ group.pool?.length || 0 }})</span>
         </div>
 
-        <!-- 词元池项目列表 -->
-        <div v-show="isGroupExpanded(group.id)" class="token-list-container">
+        <!--词元池项目列表-->
+        <div class="token-list-container">
           <div class="pool-items-grid">
             <PoolItemTag
                 v-for="poolItem in group.pool"
@@ -68,16 +73,15 @@ const props = defineProps({
   getPoolItemTooltip: Function,
 });
 
-defineEmits([
+const emit = defineEmits([
   'toggle-category',
-  'toggle-group',
   'pool-item-click',
   'pool-item-dblclick',
   'group-click',
 ]);
 
-const isGroupExpanded = (groupId) => {
-  return props.expandedGroups.has(groupId);
+const handleCategoryClick = () => {
+  emit('toggle-category');
 };
 </script>
 
@@ -117,6 +121,7 @@ const isGroupExpanded = (groupId) => {
   font-weight: 600;
   font-size: 13px;
   flex: 1;
+  cursor: pointer;
 }
 
 .category-count {
@@ -159,7 +164,6 @@ const isGroupExpanded = (groupId) => {
   background: rgba(139, 92, 246, 0.05);
   padding: 6px 10px;
   border-radius: 4px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -179,10 +183,22 @@ const isGroupExpanded = (groupId) => {
   transition: transform 0.2s;
 }
 
+/* ⭐ 新增：永久展开的图标样式 */
+.subcategory-icon.always-expanded {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
 .subcategory-title {
   color: #ddd;
   font-size: 12px;
   flex: 1;
+  cursor: pointer;
+}
+
+.subcategory-title:hover {
+  color: #667eea;
 }
 
 .subcategory-count {
@@ -211,13 +227,5 @@ const isGroupExpanded = (groupId) => {
   padding: 8px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
-}
-
-.subcategory-title {
-  cursor: pointer; /* ⭐ 新增 */
-}
-
-.subcategory-title:hover {
-  color: #667eea; /* ⭐ 新增：鼠标悬停高亮 */
 }
 </style>
