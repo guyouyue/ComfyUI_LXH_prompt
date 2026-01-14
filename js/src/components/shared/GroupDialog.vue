@@ -20,23 +20,23 @@
           <input
               ref="idInputRef"
               type="text"
-              v-model="state.formData.value.id"
+              v-model="dialog.formData.value.id"
               :disabled="isEdit"
               placeholder="例如: hair_color_01"
               class="form-input"
-              :class="{ error: validation.idError.value && !isEdit }"
+              :class="{ error: dialog.idError.value && !isEdit }"
               @keydown.enter="handleConfirm"
               @keydown.esc="handleClose"
           />
-          <span class="form-hint" :class="{ error: validation.idError.value && !isEdit }">
-            {{ validation.idError.value || '用于在提示词中引用此组合（仅支持字母、数字、下划线和连字符）' }}
+          <span class="form-hint" :class="{ error: dialog.idError.value && !isEdit }">
+            {{ dialog.idError.value || '用于在提示词中引用此组合（仅支持字母、数字、下划线和连字符）' }}
           </span>
         </div>
 
         <div class="form-group">
           <label>描述</label>
           <textarea
-              v-model="state.formData.value.description"
+              v-model="dialog.formData.value.description"
               placeholder="说明这个组合的用途..."
               class="form-textarea"
               rows="3"
@@ -52,8 +52,8 @@
         <button
             class="primary"
             @click="handleConfirm"
-            :disabled="!validation.isValid.value"
-            :title="validation.isValid.value ? '' : '请填写必填字段'"
+            :disabled="!dialog.isValid.value"
+            :title="dialog.isValid.value ? '' : '请填写必填字段'"
         >
           {{ isEdit ? '保存' : '创建' }}
         </button>
@@ -63,9 +63,8 @@
 </template>
 
 <script setup>
-import {nextTick, onMounted, ref} from 'vue';
-import {useGroupDialogState} from '../../composables/useGroupDialogState.js';
-import {useGroupDialogValidation} from '../../composables/useGroupDialogValidation.js';
+import { nextTick, onMounted, ref } from 'vue';
+import { useGroupDialog } from '../../composables/useGroupDialog.js';
 
 const props = defineProps({
   group: {
@@ -83,16 +82,15 @@ const emit = defineEmits(['close', 'confirm']);
 // ========== Refs ==========
 const idInputRef = ref(null);
 
-// ========== Composables ==========
-const state = useGroupDialogState(props);
-const validation = useGroupDialogValidation(state.formData);
+// ========== 统一的 Composable ==========
+const dialog = useGroupDialog(props);
 
 // ========== 事件处理 ==========
 /**
  * 关闭对话框
  */
 const handleClose = () => {
-  state.resetForm();
+  dialog.resetForm();
   emit('close');
 };
 
@@ -100,14 +98,14 @@ const handleClose = () => {
  * 确认
  */
 const handleConfirm = () => {
-  const result = validation.validate();
+  const result = dialog.validate();
 
   if (!result.valid) {
     alert(result.message);
     return;
   }
 
-  emit('confirm', {...state.formData.value});
+  emit('confirm', { ...dialog.formData.value });
   handleClose();
 };
 
