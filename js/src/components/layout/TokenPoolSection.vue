@@ -7,7 +7,7 @@
       <input
           type="text"
           class="search-input"
-          v-model="searchQuery"
+          v-model="pool.searchQuery.value"
           placeholder="搜索词元..."
       />
     </div>
@@ -16,34 +16,34 @@
     <div class="pool-content">
       <!-- 自定义词元池 -->
       <CustomPoolTree
-          :groups="filteredCustomGroups"
-          :has-custom-groups="hasCustomGroups"
-          :is-searching="isSearching"
-          :is-expanded="isCustomPoolExpanded"
-          :expanded-groups="expandedCustomGroups"
-          :total-count="getFilteredCustomPoolCount()"
-          :get-group-name="operations.getGroupName"
-          :get-pool-item-name="operations.getPoolItemName"
-          :get-pool-item-tooltip="operations.getPoolItemTooltip"
-          @toggle-category="handleToggleCustomPoolCategory"
-          @pool-item-click="operations.handlePoolItemClick"
-          @pool-item-dblclick="operations.handlePoolItemDoubleClick"
+          :groups="pool.filteredCustomGroups.value"
+          :has-custom-groups="pool.hasCustomGroups.value"
+          :is-searching="pool.isSearching.value"
+          :is-expanded="pool.isCustomPoolExpanded.value"
+          :expanded-groups="pool.expandedCustomGroups.value"
+          :total-count="pool.getFilteredCustomPoolCount()"
+          :get-group-name="pool.getGroupName"
+          :get-pool-item-name="pool.getPoolItemName"
+          :get-pool-item-tooltip="pool.getPoolItemTooltip"
+          @toggle-category="pool.toggleCustomPoolCategory"
+          @pool-item-click="pool.handlePoolItemClick"
+          @pool-item-dblclick="pool.handlePoolItemDoubleClick"
           @group-click="$emit('group-click', $event)"
       />
 
       <!-- 系统词库分类树 -->
       <CategoryTree
-          :categories="filteredCategories"
-          :expanded-categories="expandedCategories"
-          :expanded-subcategories="expandedSubcategories"
-          :get-category-name="operations.getCategoryName"
-          :get-subcategory-name="operations.getSubcategoryName"
-          :get-display-text="operations.getDisplayText"
-          :get-token-tooltip="operations.getTokenTooltip"
-          :get-category-token-count="operations.getCategoryTokenCount"
-          @toggle-category="handleToggleCategory"
-          @token-click="operations.handleTokenClick"
-          @token-dblclick="operations.handleTokenDoubleClick"
+          :categories="pool.filteredCategories.value"
+          :expanded-categories="pool.expandedCategories.value"
+          :expanded-subcategories="pool.expandedSubcategories.value"
+          :get-category-name="pool.getCategoryName"
+          :get-subcategory-name="pool.getSubcategoryName"
+          :get-display-text="pool.getDisplayText"
+          :get-token-tooltip="pool.getTokenTooltip"
+          :get-category-token-count="pool.getCategoryTokenCount"
+          @toggle-category="pool.toggleCategory"
+          @token-click="pool.handleTokenClick"
+          @token-dblclick="pool.handleTokenDoubleClick"
           @add-token="(category, subcategory) => $emit('add-token', category, subcategory)"
           @category-click="$emit('category-click', $event)"
           @subcategory-click="$emit('subcategory-click', $event)"
@@ -51,22 +51,20 @@
 
       <!-- 空状态 -->
       <div
-          v-if="filteredCategories.length === 0 && filteredCustomGroups.length === 0"
+          v-if="pool.filteredCategories.value.length === 0 && pool.filteredCustomGroups.value.length === 0"
           class="empty-state"
       >
-        {{ isSearching ? '未找到匹配的词元，请尝试其他关键词' : '暂无词元' }}
+        {{ pool.isSearching.value ? '未找到匹配的词元，请尝试其他关键词' : '暂无词元' }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import {computed, toRef, watch} from 'vue';
+import { watch } from 'vue';
 import CategoryTree from '../shared/CategoryTree.vue';
 import CustomPoolTree from '../shared/CustomPoolTree.vue';
-import {useTokenPoolState} from '../../composables/useTokenPoolState.js';
-import {useTokenPoolSearch} from '../../composables/useTokenPoolSearch.js';
-import {useTokenPoolOperations} from '../../composables/useTokenPoolOperations.js';
+import { useTokenPool } from '../../composables/useTokenPool.js';
 
 const props = defineProps({
   categories: Array,
@@ -86,58 +84,15 @@ const emit = defineEmits([
   'group-click',
 ]);
 
-// ========== Composables ==========
-const categoriesRef = toRef(props, 'categories');
-const customGroupsRef = toRef(props, 'customGroups');
-const languageRef = toRef(props, 'language');
-
-const state = useTokenPoolState();
-const search = useTokenPoolSearch(categoriesRef, customGroupsRef);
-const operations = useTokenPoolOperations(emit, categoriesRef, languageRef);
-
-// ========== 解构状态 ==========
-const {
-  expandedCategories,
-  expandedSubcategories,
-  expandedCustomGroups,
-  isCustomPoolExpanded,
-} = state;
-
-const {
-  searchQuery,
-  isSearching,
-  filteredCategories,
-  filteredCustomGroups,
-  getFilteredCustomPoolCount,
-} = search;
-
-// ========== 计算属性 ==========
-const hasCustomGroups = computed(() => {
-  return props.customGroups && props.customGroups.length > 0;
-});
-
-// ========== 事件处理 ==========
-const handleToggleCategory = (categoryId) => {
-  state.toggleCategory(categoryId, props.categories, isSearching.value);
-};
-
-const handleToggleCustomPoolCategory = () => {
-  state.toggleCustomPoolCategory(
-      props.customGroups,
-      filteredCustomGroups.value,
-      isSearching.value
-  );
-};
+// ========== 统一的 Composable ==========
+const pool = useTokenPool(props, emit);
 
 // ========== 监听搜索状态 ==========
-watch(isSearching, (newValue) => {
+watch(pool.isSearching, (newValue) => {
   if (newValue) {
-    state.expandSearchResults(
-        filteredCategories.value,
-        filteredCustomGroups.value
-    );
+    pool.expandSearchResults();
   } else {
-    state.collapseAll();
+    pool.collapseAll();
   }
 });
 </script>
