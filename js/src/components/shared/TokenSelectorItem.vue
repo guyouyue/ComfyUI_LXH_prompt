@@ -1,4 +1,5 @@
 <!--src/components/shared/TokenSelectorItem.vue-->
+<!--词元选择对象-->
 <template>
   <div
     class="token-item"

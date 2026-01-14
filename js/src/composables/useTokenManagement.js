@@ -13,9 +13,12 @@ export function useTokenManagement() {
         userTokens,
         addUserToken,
         updateUserToken,
+        deleteUserToken,
         saveUserTokens,
         saveUserTokenData,
         refreshMergedData,
+        saveTokenIncremental,
+        saveTokensIncremental,
     } = useTokens();
     const {customGroups, saveCustomGroups} = useCustomGroups();
 
@@ -25,10 +28,6 @@ export function useTokenManagement() {
     });
 
     // ========== 词元查找 ==========
-
-    /**
-     * 根据值查找词元映射
-     */
     const findTokenMappingByValue = (value) => {
         const lowerValue = value.toLowerCase();
         for (const token of allTokensFlat.value) {
@@ -42,9 +41,6 @@ export function useTokenManagement() {
         return null;
     };
 
-    /**
-     * 根据ID查找词元
-     */
     const findTokenById = (tokenId) => {
         for (const category of tokenCategories.value) {
             for (const subcategory of category.subcategories) {
@@ -133,7 +129,6 @@ export function useTokenManagement() {
     const syncPoolTokensInOutput = (poolKey, updatedPoolData) => {
         store.finalTokens.value.forEach((token, index) => {
             if (token.isCustomPool && token.poolKey === poolKey) {
-
                 token.poolData = {
                     ...token.poolData,
                     name: updatedPoolData.name,
@@ -431,11 +426,14 @@ export function useTokenManagement() {
     // ========== 词元保存逻辑 ==========
 
     /**
-     * 保存单个词元
+     * 保存单个词元（增量保存）
      */
     const saveSingleToken = async (saveData) => {
         try {
-            // 创建临时分类
+            console.group('💾 [saveSingleToken] 开始保存');
+            console.log('保存数据:', saveData);
+
+            // 1. 创建临时分类（如果需要）
             if (saveData.tempCategories?.length > 0) {
                 const created = await createTempCategories(
                     saveData.tempCategories,
@@ -446,7 +444,7 @@ export function useTokenManagement() {
                 }
             }
 
-            // 查找目标分类
+            // 2. 确保分类存在
             let targetCategory = tokenCategories.value.find(
                 cat => cat.id === saveData.categoryId
             );
@@ -458,7 +456,7 @@ export function useTokenManagement() {
                 );
             }
 
-            // 自动创建分类
+            // 3. 自动创建分类（如果需要）
             if (!targetCategory || !targetSubcategory) {
                 const created = await autoCreateMissingCategory(
                     saveData.categoryId,
@@ -476,97 +474,72 @@ export function useTokenManagement() {
                 }
             }
 
-            if (!targetCategory || !targetSubcategory) {
-                throw new Error(`目标分类不存在: ${saveData.categoryId}/${saveData.subcategoryId}`);
+            // 4. ⭐⭐⭐ 使用增量保存
+            const tokenToSave = {
+                id: saveData.id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                categoryId: saveData.categoryId,
+                subcategoryId: saveData.subcategoryId,
+                categoryName: targetCategory?.name,
+                subcategoryName: targetSubcategory?.name,
+                zh: saveData.zh,
+                en: saveData.en,
+                jp: saveData.jp || '',
+                description: saveData.description || '',
+                operation: saveData.isSystem ? 'create' : 'upsert'  // 系统词元创建副本，用户词元更新或创建
+            };
+
+            console.log('准备增量保存:', tokenToSave);
+
+            const success = await saveTokenIncremental(tokenToSave);
+
+            if (!success) {
+                throw new Error('增量保存失败');
             }
 
-            // 保存词元
-            if (saveData.isSystem) {
-                // 系统词元保存为用户副本
-                const newTokenData = {
-                    id: saveData.id,
-                    zh: saveData.zh,
-                    en: saveData.en,
-                    jp: saveData.jp,
-                    description: saveData.description,
-                    source: 'user',
-                    originalId: saveData.id,
-                };
+            // 5. 同步输出区
+            syncOutputTokens({
+                id: tokenToSave.id,
+                zh: saveData.zh,
+                en: saveData.en,
+                jp: saveData.jp,
+                description: saveData.description,
+                categoryId: saveData.categoryId,
+                subcategoryId: saveData.subcategoryId,
+            });
 
-                const success = await addUserToken(newTokenData, targetCategory, targetSubcategory);
-                if (!success) {
-                    throw new Error('添加用户词元失败');
-                }
-                syncOutputTokens(newTokenData);
-            } else {
-                // 用户词元更新
-                const updateData = {
-                    zh: saveData.zh,
-                    en: saveData.en,
-                    jp: saveData.jp,
-                    description: saveData.description,
-                };
-
-                const currentToken = userTokens.value
-                    .flatMap(cat =>
-                        cat.subcategories.flatMap(sub => sub.tokens.find(token => token.id === saveData.id))
-                    )
-                    .find(Boolean);
-
-                if (currentToken) {
-                    const oldCategoryId = currentToken.categoryId;
-                    const oldSubcategoryId = currentToken.subcategoryId;
-
-                    if (
-                        oldCategoryId !== saveData.categoryId ||
-                        oldSubcategoryId !== saveData.subcategoryId
-                    ) {
-                        // 转移分类
-                        await removeTokenFromCategory(saveData.id, oldCategoryId, oldSubcategoryId);
-
-                        const success = await addUserToken(
-                            {...updateData, id: saveData.id},
-                            targetCategory,
-                            targetSubcategory
-                        );
-
-                        if (!success) {
-                            throw new Error('转移词元到新分类失败');
-                        }
-                    } else {
-                        // 直接更新
-                        const success = await updateUserToken(saveData.id, updateData);
-                        if (!success) {
-                            throw new Error('更新词元失败');
-                        }
-                    }
-
-                    syncOutputTokens({
-                        id: saveData.id,
-                        ...updateData,
-                    });
-                } else {
-                    throw new Error('未找到要更新的词元');
-                }
-            }
+            console.groupEnd();
 
             const envMsg = import.meta.env.DEV
-                ? '（开发环境 - 已保存到内存）'
+                ? '（开发环境 - 已保存到文件）'
                 : '（生产环境 - 已保存到服务器）';
             alert(`✅ 词元已保存到用户词库 ${envMsg}`);
-            return {success: true};
+
+            return { success: true, tokenId: tokenToSave.id };
         } catch (error) {
-            console.error('[TokenManagement] 保存单个词元失败:', error);
+            console.error('[saveSingleToken] 保存失败:', error);
+            console.groupEnd();
             alert('❌ 保存失败: ' + error.message);
-            return {success: false};
+            return { success: false };
         }
     };
 
     /**
-     * 保存未映射词元
+     * 保存未映射词元（增量保存）
      */
     const saveUnmappedToken = async (saveData) => {
         try {
+            console.group('💾 [saveUnmappedToken] 开始保存未映射词元');
+
+            // 1. 验证
+            if (!saveData.categoryId || !saveData.subcategoryId) {
+                throw new Error('请选择分类和子分类');
+            }
+
+            if (!saveData.zh && !saveData.en) {
+                throw new Error('请至少填写中文或英文');
+            }
+
+            // 2. 创建临时分类
             if (saveData.tempCategories?.length > 0) {
                 const created = await createTempCategories(
                     saveData.tempCategories,
@@ -577,14 +550,7 @@ export function useTokenManagement() {
                 }
             }
 
-            if (!saveData.categoryId || !saveData.subcategoryId) {
-                throw new Error('请选择分类和子分类');
-            }
-
-            if (!saveData.zh && !saveData.en) {
-                throw new Error('请至少填写中文或英文');
-            }
-
+            // 3. 确保分类存在
             let targetCategory = tokenCategories.value.find(
                 cat => cat.id === saveData.categoryId
             );
@@ -613,38 +579,48 @@ export function useTokenManagement() {
                 }
             }
 
-            if (!targetCategory || !targetSubcategory) {
-                throw new Error('分类不存在，请选择有效的分类');
-            }
-
-            const newTokenData = {
-                id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            // 4. ⭐⭐⭐ 使用增量保存
+            const newTokenId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const tokenToSave = {
+                id: newTokenId,
+                categoryId: saveData.categoryId,
+                subcategoryId: saveData.subcategoryId,
+                categoryName: targetCategory?.name,
+                subcategoryName: targetSubcategory?.name,
                 zh: saveData.zh || saveData.originalValue,
                 en: saveData.en || saveData.originalValue,
                 jp: saveData.jp || '',
                 description: saveData.description || `未映射词元: ${saveData.originalValue}`,
-                source: 'user',
-                originalValue: saveData.originalValue,
+                operation: 'create'
             };
 
-            await addUserToken(newTokenData, targetCategory, targetSubcategory);
+            const success = await saveTokenIncremental(tokenToSave);
 
-            syncOutputTokens(newTokenData);
-
-            const success = await saveUserTokenData();
-            if (success) {
-                alert('✅ 未映射词元已保存到用户词库');
-                return {
-                    success: true,
-                    tokenId: newTokenData.id,
-                };
-            } else {
-                throw new Error('保存到文件失败');
+            if (!success) {
+                throw new Error('增量保存失败');
             }
+
+            // 5. 同步输出区
+            syncOutputTokens({
+                id: newTokenId,
+                zh: tokenToSave.zh,
+                en: tokenToSave.en,
+                jp: tokenToSave.jp,
+                description: tokenToSave.description,
+                categoryId: saveData.categoryId,
+                subcategoryId: saveData.subcategoryId,
+                originalValue: saveData.originalValue,
+            });
+
+            console.groupEnd();
+            alert('✅ 未映射词元已保存到用户词库');
+
+            return { success: true, tokenId: newTokenId };
         } catch (error) {
-            console.error('[TokenManagement] 保存未映射词元失败:', error);
+            console.error('[saveUnmappedToken] 保存失败:', error);
+            console.groupEnd();
             alert('❌ 保存失败: ' + error.message);
-            return {success: false};
+            return { success: false };
         }
     };
 
@@ -652,13 +628,13 @@ export function useTokenManagement() {
      * 保存词元池
      */
     const savePoolToken = async (saveData) => {
+        // ... 保持原有实现不变
         try {
             const targetGroup = customGroups.value.find(
                 group => group.id === saveData.groupId || group.id === saveData.groupKey
             );
 
             if (!targetGroup) {
-                console.error('[TokenManagement] 未找到目标分组');
                 throw new Error(`未找到目标分组（Group ID: ${saveData.groupId}）`);
             }
 
@@ -707,11 +683,11 @@ export function useTokenManagement() {
             });
 
             alert('✅ 词元池已更新');
-            return {success: true};
+            return { success: true };
         } catch (error) {
-            console.error('[TokenManagement] 保存词元池失败:', error);
+            console.error('[savePoolToken] 保存失败:', error);
             alert('❌ 保存失败: ' + error.message);
-            return {success: false};
+            return { success: false };
         }
     };
 

@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "updatedAt": 1736860800000,
+  "groups": [
+    {
+      "id": "hair_color",
+      "name": { "zh": "发色池", "en": "Hair Color Pool" },
+      "description": "用于随机生成头发颜色的词元池",
+      "pool": [
+        {
+          "id": "blonde_hair",
+          "name": { "zh": "头发1", "en": "Hair1" },
+          "tokens": [
+            {
+              "type": "quote",
+              "id": "hair_101",
+              "weight": 1.5
+            },{
+              "type": "new",
+              "id": "new_blue_token",
+              "zh": "蓝色",
+              "en": "blue",
+              "jp": "青い",
+              "weight": 1.0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

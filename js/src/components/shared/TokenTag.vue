@@ -1,4 +1,5 @@
 <!--src/components/shared/TokenTag.vue-->
+<!--词元对象显示标签-->
 <template>
   <div
       class="token-tag"

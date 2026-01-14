@@ -30,7 +30,7 @@ export function useAppInit(props, tokensComposable, groupsComposable) {
 
             groupsComposable.setTokensMap(allTokensFlat);
 
-            // 4. 加载自定义组合
+            // 4. 加载词元池
             await groupsComposable.loadCustomGroups();
 
             // 5. 解析初始文本

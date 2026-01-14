@@ -1,4 +1,5 @@
 <!--src/components/shared/TokenSelector.vue-->
+<!--词元选择整体组件-->
 <template>
   <div class="token-selector-overlay" @click.self="handleClose">
     <div class="token-selector-content">

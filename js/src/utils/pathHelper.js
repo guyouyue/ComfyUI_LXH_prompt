@@ -23,10 +23,10 @@ export function getBasePath() {
 export function getDataPath(filename) {
     if (import.meta.env.DEV) {
         // 开发环境：直接读取本地文件
-        return `/data/${filename}?t=${Date.now()}`;
+        return `/data/${filename}`;
     }
     // 生产环境：使用API
-    return `/lxh_prompt/getData?t=${Date.now()}`;
+    return `/lxh_prompt/getData`;
 }
 
 /**
@@ -35,16 +35,16 @@ export function getDataPath(filename) {
 export function getUserDataPath(filename) {
     if (import.meta.env.DEV) {
         // 开发环境：直接读取本地文件
-        return `/data_user/${filename}?t=${Date.now()}`;
+        return `/data_user/${filename}`;
     }
 
     // 生产环境：使用API
     if (filename === 'group.json') {
-        return `/lxh_prompt/getUserData?t=${Date.now()}`;
+        return `/lxh_prompt/getUserData`;
     } else if (filename === 'data.json') {
-        return `/lxh_prompt/getUserTokens?t=${Date.now()}`;
+        return `/lxh_prompt/getUserTokens`;
     }
-    return `/lxh_prompt/getUserData?t=${Date.now()}`;
+    return `/lxh_prompt/getUserData`;
 }
 
 /**

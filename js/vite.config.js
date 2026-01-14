@@ -189,7 +189,7 @@ export default defineConfig({
         middlewareMode: false,
 
         proxy: {
-            '/data_user': {
+            '/data_user/': {
                 target: 'http://localhost:3000',
                 rewrite: (path) => path.replace(/^\/data_user/, ''),
                 bypass: (req, res, options) => {
@@ -214,7 +214,7 @@ export default defineConfig({
                 }
             },
 
-            '/data': {
+            '/data/': {
                 target: 'http://localhost:3000',
                 rewrite: (path) => path.replace(/^\/data/, ''),
                 bypass: (req, res, options) => {
