@@ -38,41 +38,41 @@
 
       <div
           class="output-content"
-          :class="{ focused: focused && state.focusedSection.value === 'original' }"
+          :class="{ focused: focused && output.focusedSection.value === 'original' }"
       >
         <div
             class="token-list"
-            @dragover.prevent="drag.handleDragOver"
-            @drop="drag.handleDrop('original')"
+            @dragover.prevent="output.handleDragOver"
+            @drop="output.handleDrop('original')"
         >
           <template v-for="(token, index) in tokens" :key="token.id">
             <OutputTokenTag
-                :ref="(el) => token.isEditing && state.setEditInputRef(el?.$el, index)"
+                :ref="(el) => token.isEditing && output.setEditInputRef(el?.$el, index)"
                 :token="token"
-                :display-text="display.getViewTokenDisplay(token)"
-                :title="display.getOriginalTokenTitle(token)"
+                :display-text="output.getViewTokenDisplay(token)"
+                :title="output.getOriginalTokenTitle(token)"
                 :is-editing="token.isEditing"
                 :is-cursor-active="cursorIndex === index"
-                :is-dragging="drag.isDragging.value && drag.dragInfo.value.sourceIndex === index && drag.dragInfo.value.sourceArea === 'original'"
-                :is-drop-target="drag.dropTargetIndex.value === index && drag.dropTargetArea.value === 'original'"
-                :is-long-press-active="drag.longPressActive.value && drag.longPressToken.value.area === 'original' && drag.longPressToken.value.index === index"
-                :long-press-progress="drag.longPressToken.value.area === 'original' && drag.longPressToken.value.index === index ? drag.longPressProgress.value : 0"
+                :is-dragging="output.isDragging.value && output.dragInfo.value.sourceIndex === index && output.dragInfo.value.sourceArea === 'original'"
+                :is-drop-target="output.dropTargetIndex.value === index && output.dropTargetArea.value === 'original'"
+                :is-long-press-active="output.longPressActive.value && output.longPressToken.value.area === 'original' && output.longPressToken.value.index === index"
+                :long-press-progress="output.longPressToken.value.area === 'original' && output.longPressToken.value.index === index ? output.longPressProgress.value : 0"
                 :model-value="token.value"
                 area="original"
                 @update:model-value="token.value = $event"
-                @mousedown="drag.handleMouseDown($event, token, index, 'original')"
-                @touchstart="drag.handleTouchStart($event, token, index, 'original')"
+                @mousedown="output.handleMouseDown($event, token, index, 'original')"
+                @touchstart="output.handleTouchStart($event, token, index, 'original')"
                 @click="handleOriginalTokenClick(token, index)"
                 @remove="$emit('remove-token', index)"
-                @edit-confirm="edit.handleEditConfirm(index)"
-                @edit-cancel="edit.handleEditCancel(index)"
-                @edit-blur="edit.handleEditBlur(index)"
+                @edit-confirm="output.handleEditConfirm(index)"
+                @edit-cancel="output.handleEditCancel(index)"
+                @edit-blur="output.handleEditBlur(index)"
             />
           </template>
 
           <span
               class="cursor-placeholder"
-              v-if="focused && state.focusedSection.value === 'original'"
+              v-if="focused && output.focusedSection.value === 'original'"
               :style="{ order: cursorIndex !== null ? cursorIndex + 1 : tokens.length + 1 }"
           >
             |
@@ -84,7 +84,7 @@
 
         <div class="text-preview">
           <span class="preview-label">查看预览:</span>
-          <span class="preview-text">{{ display.getViewTextPreview.value }}</span>
+          <span class="preview-text">{{ output.getViewTextPreview.value }}</span>
         </div>
       </div>
     </div>
@@ -126,41 +126,41 @@
 
       <div
           class="output-content"
-          :class="{ focused: focused && state.focusedSection.value === 'mapped' }"
+          :class="{ focused: focused && output.focusedSection.value === 'mapped' }"
       >
         <div
             class="token-list"
-            @dragover.prevent="drag.handleDragOver"
-            @drop="drag.handleDrop('mapped')"
+            @dragover.prevent="output.handleDragOver"
+            @drop="output.handleDrop('mapped')"
         >
           <template v-for="(token, index) in tokens" :key="token.id">
             <OutputTokenTag
-                :ref="(el) => token.isEditing && state.setEditInputRef(el?.$el, index)"
+                :ref="(el) => token.isEditing && output.setEditInputRef(el?.$el, index)"
                 :token="token"
-                :display-text="display.getMappedTokenDisplay(token)"
-                :title="display.getMappedTokenTitle(token)"
+                :display-text="output.getMappedTokenDisplay(token)"
+                :title="output.getMappedTokenTitle(token)"
                 :is-editing="token.isEditing"
                 :is-cursor-active="cursorIndex === index"
-                :is-dragging="drag.isDragging.value && drag.dragInfo.value.sourceIndex === index && drag.dragInfo.value.sourceArea === 'mapped'"
-                :is-drop-target="drag.dropTargetIndex.value === index && drag.dropTargetArea.value === 'mapped'"
-                :is-long-press-active="drag.longPressActive.value && drag.longPressToken.value.area === 'mapped' && drag.longPressToken.value.index === index"
-                :long-press-progress="drag.longPressToken.value.area === 'mapped' && drag.longPressToken.value.index === index ? drag.longPressProgress.value : 0"
+                :is-dragging="output.isDragging.value && output.dragInfo.value.sourceIndex === index && output.dragInfo.value.sourceArea === 'mapped'"
+                :is-drop-target="output.dropTargetIndex.value === index && output.dropTargetArea.value === 'mapped'"
+                :is-long-press-active="output.longPressActive.value && output.longPressToken.value.area === 'mapped' && output.longPressToken.value.index === index"
+                :long-press-progress="output.longPressToken.value.area === 'mapped' && output.longPressToken.value.index === index ? output.longPressProgress.value : 0"
                 :model-value="token.value"
                 area="mapped"
                 @update:model-value="token.value = $event"
-                @mousedown="drag.handleMouseDown($event, token, index, 'mapped')"
-                @touchstart="drag.handleTouchStart($event, token, index, 'mapped')"
+                @mousedown="output.handleMouseDown($event, token, index, 'mapped')"
+                @touchstart="output.handleTouchStart($event, token, index, 'mapped')"
                 @click="handleMappedTokenClick(token, index)"
                 @remove="$emit('remove-token', index)"
-                @edit-confirm="edit.handleEditConfirm(index)"
-                @edit-cancel="edit.handleEditCancel(index)"
-                @edit-blur="edit.handleEditBlur(index)"
+                @edit-confirm="output.handleEditConfirm(index)"
+                @edit-cancel="output.handleEditCancel(index)"
+                @edit-blur="output.handleEditBlur(index)"
             />
           </template>
 
           <span
               class="cursor-placeholder"
-              v-if="focused && state.focusedSection.value === 'mapped'"
+              v-if="focused && output.focusedSection.value === 'mapped'"
               :style="{ order: cursorIndex !== null ? cursorIndex + 1 : tokens.length + 1 }"
           >
             |
@@ -169,7 +169,7 @@
 
         <div class="text-preview">
           <span class="preview-label">最终输出:</span>
-          <span class="preview-text final-text">{{ display.getFinalTextPreview.value }}</span>
+          <span class="preview-text final-text">{{ output.getFinalTextPreview.value }}</span>
         </div>
       </div>
     </div>
@@ -177,12 +177,9 @@
 </template>
 
 <script setup>
-import {onUnmounted, watch} from 'vue';
+import { onUnmounted } from 'vue';
 import OutputTokenTag from '../shared/OutputTokenTag.vue';
-import {useFinalOutputState} from '../../composables/useFinalOutputState.js';
-import {useFinalOutputDrag} from '../../composables/useFinalOutputDrag.js';
-import {useFinalOutputEdit} from '../../composables/useFinalOutputEdit.js';
-import {useFinalOutputDisplay} from '../../composables/useFinalOutputDisplay.js';
+import { useFinalOutput } from '../../composables/useFinalOutput.js';
 
 const props = defineProps({
   tokens: Array,
@@ -206,41 +203,27 @@ const emit = defineEmits([
   'edit-cancel',
 ]);
 
-// ========== Composables ==========
-const state = useFinalOutputState();
-const drag = useFinalOutputDrag(emit);
-const edit = useFinalOutputEdit(props, state, emit);
-const display = useFinalOutputDisplay(props);
+// ========== 统一的 Composable ==========
+const output = useFinalOutput(props, emit);
 
 // ========== 事件处理 ==========
 const handleOriginalTokenClick = (token, index) => {
-  drag.cancelLongPress();
-  state.setFocusedSection('original');
+  output.cancelLongPress();
+  output.setFocusedSection('original');
   emit('token-click', token, index);
   emit('token-dblclick', token, index);
 };
 
 const handleMappedTokenClick = (token, index) => {
-  drag.cancelLongPress();
-  state.setFocusedSection('mapped');
+  output.cancelLongPress();
+  output.setFocusedSection('mapped');
   emit('token-click', token, index);
   emit('token-dblclick', token, index);
 };
 
-// ========== 监听聚焦状态 ==========
-watch(
-    () => props.focused,
-    (newVal) => {
-      if (newVal) {
-        state.setFocusedSection('mapped');
-      }
-    }
-);
-
 // ========== 清理 ==========
 onUnmounted(() => {
-  drag.cleanup();
-  edit.cleanup();
+  output.cleanup();
 });
 </script>
 
@@ -291,7 +274,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* ⭐ 关键：允许子元素收缩 */
+  min-height: 0;
   border-bottom: 1px solid #333;
 }
 
@@ -307,7 +290,7 @@ onUnmounted(() => {
   padding: 2px 16px;
   background: #2a2a2a;
   border-bottom: 1px solid #333;
-  flex-shrink: 0; /* ⭐ 头部不收缩 */
+  flex-shrink: 0;
 }
 
 .section-title-wrapper {
@@ -359,15 +342,15 @@ onUnmounted(() => {
 
 /* ==================== 内容区域 ==================== */
 .output-content {
-  flex: 1; /* ⭐ 占据剩余空间 */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* ⭐ 关键：允许内部滚动 */
+  min-height: 0;
   padding: 4px 12px;
   cursor: text;
   transition: background 0.2s;
   gap: 2px;
-  overflow: hidden; /* ⭐ 改为 hidden，让子元素独立滚动 */
+  overflow: hidden;
 }
 
 .output-content.focused {
@@ -377,18 +360,18 @@ onUnmounted(() => {
 
 /* ==================== 词元列表 ==================== */
 .token-list {
-  flex: 1; /* ⭐ 占据剩余空间 */
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  align-items: flex-start; /* ⭐ 改为顶部对齐 */
-  align-content: flex-start; /* ⭐ 内容顶部对齐 */
+  align-items: flex-start;
+  align-content: flex-start;
   position: relative;
   min-height: 0px;
-  max-height: 100%; /* ⭐ 限制最大高度 */
-  overflow-y: auto; /* ⭐ 允许独立滚动 */
+  max-height: 100%;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 2px; /* ⭐ 为滚动条留出空间 */
+  padding-right: 2px;
 }
 
 /* ==================== 滚动条样式 ==================== */
@@ -416,7 +399,7 @@ onUnmounted(() => {
   font-weight: bold;
   animation: blink 1s infinite;
   padding: 0 2px;
-  flex-shrink: 0; /* ⭐ 光标不收缩 */
+  flex-shrink: 0;
 }
 
 @keyframes blink {
@@ -435,21 +418,21 @@ onUnmounted(() => {
   color: #666;
   font-style: italic;
   font-size: 13px;
-  flex-shrink: 0; /* ⭐ 占位提示不收缩 */
+  flex-shrink: 0;
 }
 
 /* ==================== 文本预览 ==================== */
 .text-preview {
-  flex-shrink: 0; /* ⭐ 关键：文本预览不收缩，固定在底部 */
+  flex-shrink: 0;
   padding: 8px 12px;
   background: #1e1e1e;
   border-radius: 4px;
   border-left: 3px solid #444;
   font-size: 12px;
   line-height: 1.5;
-  max-height: 66px; /* ⭐ 限制最大高度 */
-  overflow-y: auto; /* ⭐ 超出时可滚动 */
-  margin-top: auto; /* ⭐ 推到底部 */
+  max-height: 66px;
+  overflow-y: auto;
+  margin-top: auto;
 }
 
 .text-preview::-webkit-scrollbar {
@@ -470,13 +453,13 @@ onUnmounted(() => {
   color: #888;
   font-weight: 600;
   margin-right: 8px;
-  white-space: nowrap; /* ⭐ 标签不换行 */
+  white-space: nowrap;
 }
 
 .preview-text {
   color: #e0e0e0;
   word-break: break-all;
-  display: inline; /* ⭐ 确保内联显示 */
+  display: inline;
 }
 
 .final-text {
